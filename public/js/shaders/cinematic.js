@@ -71,6 +71,8 @@ uniform float uTime;
 uniform vec2 uResolution;
 uniform float uFlash;
 uniform float uFade;
+uniform vec2 uLight;
+uniform float uFlashlight;
 
 vec3 aces(vec3 x) {
     return clamp((x * (2.51 * x + 0.03)) / (x * (2.43 * x + 0.59) + 0.14), 0.0, 1.0);
@@ -149,6 +151,12 @@ void main() {
     col = mix(col, grade(col), uGrade);
     col = aces(col);
     col = pow(col, vec3(1.0 / 2.2));
+
+    // Pointer "flashlight": a soft cool glow that follows the cursor and
+    // gently lifts the scene around it
+    vec2 ld = (vUv - uLight) * vec2(uResolution.x / uResolution.y, 1.0);
+    float light = exp(-dot(ld, ld) * 9.0) * uFlashlight;
+    col += light * vec3(0.55, 0.72, 0.85) * 0.16;
 
     float vig = smoothstep(0.9, 0.15, length(cc * vec2(uResolution.x / uResolution.y, 1.0) * 0.9));
     col *= mix(1.0, vig, uVignette);

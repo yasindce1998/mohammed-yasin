@@ -15,6 +15,8 @@ import {
 export const CARD_W = 4.2;
 const CARD_H = 2.65;
 
+const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
 export class Cards {
     constructor(gl) {
         this.gl = gl;
@@ -27,8 +29,8 @@ export class Cards {
         this.hoveredCard = null;
 
         this.initGeometry();
-        this.initTextures();
         this.initStates();
+        this.textures = new Array(this.projects.length).fill(null);
 
         // Category filtering: null = all projects visible
         this.visible = null;
@@ -95,32 +97,70 @@ export class Cards {
     }
 
     initTextures() {
+        this.projects.forEach((_, i) => this.initTexture(i));
+    }
+
+    // Builds one card's canvas art + GPU texture. Split out so the boot loader
+    // can report progress per card instead of blocking on all seven at once.
+    initTexture(i) {
         const gl = this.gl;
-        this.textures = this.projects.map((p) => {
-            const canvas = document.createElement('canvas');
-            canvas.width = 1024;
-            canvas.height = 640;
-            const ctx = canvas.getContext('2d');
+        const p = this.projects[i];
 
-            this.renderCardGraphic(ctx, p, canvas.width, canvas.height);
+        const canvas = document.createElement('canvas');
+        canvas.width = 1024;
+        canvas.height = 640;
+        const ctx = canvas.getContext('2d');
 
-            const tex = gl.createTexture();
-            gl.bindTexture(gl.TEXTURE_2D, tex);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-            // Canvas rows run top-down; quad UVs have v = 0 at the bottom
-            gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
-            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, canvas);
-            gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+        this.renderCardGraphic(ctx, p, canvas.width, canvas.height, 1);
 
-            return tex;
-        });
+        // Keep the canvas around so hover can re-render the terminal logs
+        const state = this.cardStates[i];
+        if (state) {
+            state.canvas = canvas;
+            state.ctx = ctx;
+        }
+
+        const tex = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D, tex);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        // Canvas rows run top-down; quad UVs have v = 0 at the bottom
+        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, canvas);
+        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+
+        this.textures[i] = tex;
+        return tex;
+    }
+
+    // Re-renders a card's logs at a given typing progress and re-uploads it
+    updateCardLogs(i, time) {
+        const card = this.cardStates[i];
+        if (!card || !card.ctx || !this.textures[i]) return;
+
+        let progress = 1;
+        if (time !== Infinity) {
+            const logs = card.project.logs || [];
+            const total = logs.reduce((n, l) => n + l.length, 0);
+            const typeDur = Math.max(0.6, total * 0.035);
+            const hold = 2.2;
+            const phase = time % (typeDur + hold);
+            progress = phase >= typeDur ? 1 : phase / typeDur;
+        }
+
+        this.renderCardGraphic(card.ctx, card.project, card.canvas.width, card.canvas.height, progress);
+
+        const gl = this.gl;
+        gl.bindTexture(gl.TEXTURE_2D, this.textures[i]);
+        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, card.canvas);
+        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
     }
 
     // Security-console themed graphic generator for project posters
-    renderCardGraphic(ctx, project, w, h) {
+    renderCardGraphic(ctx, project, w, h, logProgress = 1) {
         const accent = project.accent || '#00f2fe';
 
         // Deep terminal background
@@ -157,7 +197,7 @@ export class Cards {
         }
 
         // Giant background project number
-        ctx.font = '900 240px "Inter", -apple-system, sans-serif';
+        ctx.font = '700 240px "Space Grotesk", -apple-system, sans-serif';
         ctx.fillStyle = 'rgba(255, 255, 255, 0.035)';
         ctx.textAlign = 'right';
         ctx.textBaseline = 'top';
@@ -170,41 +210,51 @@ export class Cards {
         ctx.restore();
 
         // Terminal log lines (top-left, under index)
-        ctx.font = '400 12px ui-monospace, SFMono-Regular, monospace';
+        ctx.font = '400 12px "Space Mono", ui-monospace, monospace';
         ctx.textAlign = 'left';
         ctx.textBaseline = 'top';
         const logs = project.logs || [];
+        // Type-on animation: reveal a fraction of the total characters across
+        // all lines, with a block cursor at the active position
+        let remaining = Math.round(logs.reduce((n, l) => n + l.length, 0) * Math.max(0, Math.min(1, logProgress)));
         logs.forEach((line, i) => {
+            const count = Math.max(0, Math.min(line.length, remaining));
+            const shown = line.slice(0, count);
+            remaining -= line.length;
             const isAlert = /BLOCKED|DETECTED|LOW|escape/i.test(line);
             ctx.fillStyle = isAlert ? 'rgba(255, 80, 90, 0.75)' : `${accent}aa`;
-            ctx.fillText(line, 48, 96 + i * 22);
+            ctx.fillText(shown, 48, 96 + i * 22);
+            if (count > 0 && count < line.length) {
+                const cw = ctx.measureText(shown).width;
+                ctx.fillRect(48 + cw + 2, 96 + i * 22, 7, 12);
+            }
         });
 
         // Top Left: Project Index & Category
-        ctx.font = '600 13px ui-monospace, SFMono-Regular, monospace';
+        ctx.font = '600 13px "Space Mono", ui-monospace, monospace';
         ctx.fillStyle = accent;
         ctx.fillText(`[ ${project.num} // ${project.category} ]`, 48, 48);
 
         // Status & Year in top right
-        ctx.font = '500 12px ui-monospace, SFMono-Regular, monospace';
+        ctx.font = '500 12px "Space Mono", ui-monospace, monospace';
         ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
         ctx.textAlign = 'right';
         ctx.fillText(`${project.status} · ${project.year}`, w - 48, 48);
 
         // Main Project Title
-        ctx.font = '700 54px "Inter", -apple-system, sans-serif';
+        ctx.font = '700 54px "Space Grotesk", -apple-system, sans-serif';
         ctx.fillStyle = '#ffffff';
         ctx.textAlign = 'left';
         ctx.textBaseline = 'bottom';
         ctx.fillText(project.title, 48, h - 108);
 
         // Tagline / Subtitle
-        ctx.font = '400 17px "Inter", -apple-system, sans-serif';
+        ctx.font = '400 17px "Space Grotesk", -apple-system, sans-serif';
         ctx.fillStyle = 'rgba(255, 255, 255, 0.65)';
         ctx.fillText(project.tagline, 48, h - 72);
 
         // Tech badges (bottom)
-        ctx.font = '600 11px ui-monospace, SFMono-Regular, monospace';
+        ctx.font = '600 11px "Space Mono", ui-monospace, monospace';
         ctx.fillStyle = `${accent}bb`;
         ctx.fillText(project.tags.slice(0, 4).join(' · '), 48, h - 42);
 
@@ -226,7 +276,7 @@ export class Cards {
         if (id === 'redhands') {
             // Agent-to-toolchain topology: central agent node branching to tools
             ctx.beginPath(); ctx.arc(0, 0, 26, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-            ctx.font = '700 14px ui-monospace, monospace';
+            ctx.font = '700 14px "Space Mono", ui-monospace, monospace';
             ctx.fillStyle = accent;
             ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
             ctx.fillText('AI', 0, 1);
@@ -293,7 +343,7 @@ export class Cards {
         } else if (id === 'barzakh') {
             // Boot chain: UEFI → bootloader → kernel stages
             const stages = ['UEFI', 'SHIM', 'GRUB', 'KERNEL'];
-            ctx.font = '600 11px ui-monospace, monospace';
+            ctx.font = '600 11px "Space Mono", ui-monospace, monospace';
             ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
             stages.forEach((s, i) => {
                 const x = -110 + i * 74;
@@ -310,7 +360,7 @@ export class Cards {
             ctx.beginPath(); ctx.moveTo(-124, 34); ctx.lineTo(124, 34); ctx.stroke();
             ctx.setLineDash([]);
             ctx.fillStyle = 'rgba(255, 80, 90, 0.85)';
-            ctx.font = '600 10px ui-monospace, monospace';
+            ctx.font = '600 10px "Space Mono", ui-monospace, monospace';
             ctx.fillText('TRUST BOUNDARY', 0, 48);
         } else if (id === 'warmor') {
             // Two runtimes bridged: eBPF hex ring + WASM module
@@ -325,7 +375,7 @@ export class Cards {
                 ctx.lineTo(Math.cos(a2) * 42, Math.sin(a2) * 42);
                 ctx.stroke();
             }
-            ctx.font = '600 11px ui-monospace, monospace';
+            ctx.font = '600 11px "Space Mono", ui-monospace, monospace';
             ctx.fillStyle = accent; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
             ctx.fillText('eBPF', 0, 0);
             ctx.restore();
@@ -338,7 +388,7 @@ export class Cards {
             }
             ctx.closePath(); ctx.stroke();
             ctx.fillStyle = accent;
-            ctx.font = '600 11px ui-monospace, monospace';
+            ctx.font = '600 11px "Space Mono", ui-monospace, monospace';
             ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
             ctx.fillText('WASM', 0, 0);
             ctx.restore();
@@ -442,6 +492,8 @@ export class Cards {
                     hitResult = {
                         cardIndex: i,
                         uv: [u, v],
+                        // Local hit point transformed to world space (for click bursts)
+                        world: vec3TransformMat4([0, 0, 0], [hitX, hitY, 0], card.modelMatrix),
                         project: card.project
                     };
                 }
@@ -494,6 +546,22 @@ export class Cards {
             const isHovered = (this.hoveredIndex === i);
             const targetHover = isHovered ? 1.0 : 0.0;
             card.hover = damp(card.hover, targetHover, 8, dt);
+
+            // Live terminal logs: type in while hovered (mouse only — touch
+            // has no hover and re-uploading textures would waste bandwidth)
+            if (isHovered && pointer && pointer.type === 'mouse' && !reduceMotion) {
+                card.logT = (card.logT || 0) + dt;
+                if (card.logT - (card.texAt || 0) > 0.09) {
+                    card.texAt = card.logT;
+                    this.updateCardLogs(i, card.logT);
+                    card.animating = true;
+                }
+            } else if (card.animating) {
+                card.animating = false;
+                card.logT = 0;
+                card.texAt = 0;
+                this.updateCardLogs(i, Infinity);
+            }
 
             if (isHovered && this.hoveredUv) {
                 card.pointer[0] = damp(card.pointer[0], this.hoveredUv[0], 12, dt);

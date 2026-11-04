@@ -40,6 +40,51 @@
     text-shadow: 0 0 50px rgba(0, 242, 254, 0.3);
 }
 
+/* Dot-matrix title canvas (splash.js). Sized to match the h1 it visually replaces. */
+.enter-canvas {
+    display: block;
+    width: min(92vw, 780px);
+    height: clamp(70px, 13vw, 150px);
+}
+
+/* Boot progress readout */
+.enter-progress {
+    display: grid;
+    gap: 8px;
+    justify-items: center;
+    width: min(64vw, 320px);
+    margin-top: 6px;
+    opacity: 1;
+    transition: opacity 0.5s var(--ease);
+}
+
+.enter-progress.done {
+    opacity: 0;
+}
+
+.enter-progress-track {
+    width: 100%;
+    height: 1px;
+    background: rgba(245, 245, 248, 0.14);
+    overflow: hidden;
+}
+
+.enter-progress-bar {
+    width: 0%;
+    height: 100%;
+    background: var(--accent);
+    box-shadow: 0 0 10px rgba(0, 242, 254, 0.6);
+    transition: width 0.18s var(--ease-out);
+}
+
+.enter-progress-label {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: rgba(245, 245, 248, 0.45);
+}
+
 .enter-meta {
     margin: 0;
     min-height: 1.4em;
@@ -52,6 +97,17 @@
 .enter-meta.dim {
     color: rgba(245, 245, 248, 0.4);
     letter-spacing: 0.2em;
+}
+
+@media (max-width: 600px) {
+    .enter-meta {
+        font-size: 10px;
+        letter-spacing: 0.18em;
+    }
+
+    .enter-meta.dim {
+        letter-spacing: 0.14em;
+    }
 }
 
 .enter-actions {

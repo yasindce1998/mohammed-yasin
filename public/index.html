@@ -4,6 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="theme-color" content="#050508">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="apple-mobile-web-app-title" content="Mohammed Yasin">
+    <link rel="manifest" href="/manifest.webmanifest">
+    <link rel="apple-touch-icon" href="/assets/meta/apple-touch-icon.png">
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23050508'/%3E%3Cpath d='M6 24 L16 6 L26 24' fill='none' stroke='%2300f2fe' stroke-width='2'/%3E%3Ccircle cx='16' cy='19' r='2.5' fill='none' stroke='%23ff2a4d' stroke-width='2'/%3E%3C/svg%3E">
     <title>Mohammed Yasin — Security Engineer & Digital Architect</title>
     <meta name="description" content="Mohammed Yasin — Security engineer building kernel-level offense and cloud-native defense. eBPF, Rust, Golang, Kubernetes. Interactive WebGL portfolio.">
@@ -14,6 +19,9 @@
     <meta name="twitter:card" content="summary">
     <meta name="twitter:title" content="Mohammed Yasin — Security Engineer & Digital Architect">
     <meta name="twitter:description" content="Kernel-level offense, cloud-native defense. Interactive WebGL portfolio.">
+    <link rel="preload" href="/fonts/space-grotesk.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="/fonts/space-mono-400.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="/fonts/space-mono-700.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="stylesheet" href="/css/style.css">
     <link rel="stylesheet" href="/css/cinematic.css">
     <link rel="modulepreload" href="/js/main.js">
@@ -42,14 +50,22 @@
     <div id="enter" class="enter" role="dialog" aria-labelledby="enter-title">
         <div class="enter-inner">
             <p class="enter-meta" data-decode="SECURITY ENGINEER // BENGALURU, INDIA"></p>
-            <h1 id="enter-title" class="enter-title" data-decode="MOHAMMED YASIN"></h1>
+            <h1 id="enter-title" class="enter-title sr-only">MOHAMMED YASIN</h1>
+            <canvas id="enter-canvas" class="enter-canvas" aria-hidden="true"></canvas>
             <p class="enter-meta dim" data-decode="KERNEL-LEVEL OFFENSE · CLOUD-NATIVE DEFENSE"></p>
             <div class="enter-actions">
-                <button id="enter-sound" class="pill pill-primary" type="button" data-magnetic>ENTER WITH SOUND</button>
-                <button id="enter-silent" class="pill" type="button" data-magnetic>ENTER SILENTLY</button>
+                <button id="enter-sound" class="pill pill-primary" type="button" data-magnetic disabled>ENTER WITH SOUND</button>
+                <button id="enter-silent" class="pill" type="button" data-magnetic disabled>ENTER SILENTLY</button>
+            </div>
+            <div class="enter-progress" id="enter-progress">
+                <div class="enter-progress-track"><div class="enter-progress-bar" id="enter-progress-bar"></div></div>
+                <span class="enter-progress-label" id="enter-progress-label">BOOT // INITIALIZING</span>
             </div>
         </div>
     </div>
+
+    <!-- Viewport corner brackets -->
+    <div class="frame" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
 
     <!-- Header -->
     <header class="top">
@@ -60,6 +76,7 @@
 
         <div class="telemetry">
             <span id="telemetry-time">BLR 14:32</span>
+            <span id="telemetry-stats" class="telemetry-stats">-- FPS · -- PTCL · Q1.00</span>
         </div>
 
         <div class="header-right">
@@ -83,6 +100,9 @@
             </div>
         </div>
     </main>
+
+    <!-- Live region for screen readers: announces the focused project -->
+    <p id="sr-status" class="sr-only" role="status" aria-live="polite"></p>
 
     <!-- Bottom Navigation Bar -->
     <footer class="bottom-bar">

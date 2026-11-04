@@ -101,6 +101,7 @@ export class UI {
         this.initPagination();
         this.initFilters();
         this.initModals();
+        this.initA11y();
         this.initCursorEvents();
         this.updateProjectUI(0);
     }
@@ -273,6 +274,31 @@ export class UI {
             e.preventDefault();
             first.focus();
         }
+    }
+
+    // GLA11y-style accessibility layer: a visually hidden DOM mirror of the
+    // WebGL ribbon so keyboard and screen-reader users can open every project.
+    // The list only becomes visible when focused (see .sr-only:focus-within).
+    initA11y() {
+        this.srStatus = document.getElementById('sr-status');
+
+        const nav = document.createElement('nav');
+        nav.className = 'sr-only sr-nav';
+        nav.setAttribute('aria-label', 'Projects');
+
+        this.projects.forEach((p, i) => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.textContent = `${p.num}. ${p.title} — ${p.tagline}`;
+            btn.addEventListener('click', () => {
+                const slot = this.cards ? this.cards.visibleList.indexOf(i) : i;
+                if (slot !== -1) this.input.goTo(slot);
+                this.openCaseStudy(p);
+            });
+            nav.appendChild(btn);
+        });
+
+        document.body.appendChild(nav);
     }
 
     setModalVisible(modal, visible, focusEl) {
@@ -453,6 +479,11 @@ export class UI {
 
         // Update pagination dots
         this.pagDots?.forEach((dot, i) => dot.classList.toggle('active', i === index));
+
+        // Announce the focused project to assistive tech
+        if (this.srStatus) {
+            this.srStatus.textContent = `${p.num}. ${p.title} — ${p.tagline}`;
+        }
     }
 
     update(dt, velocity) {
