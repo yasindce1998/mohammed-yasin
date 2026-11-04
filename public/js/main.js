@@ -3,7 +3,7 @@
 // momentum physics, liquid shaders, ambient dust particles, audio, and UI.
 
 import { createContext, createProgram, createTexture, pass, bindTarget, FULLSCREEN_VS } from './gl.js';
-import { perspective, lookAt, damp, lerp, clamp, hslToRgb, hexToRgb } from './math.js';
+import { perspective, lookAt, damp, lerp, clamp, hexToRgb } from './math.js';
 import { Cards, CARD_W } from './cards.js';
 import { Particles } from './particles.js';
 import { Post } from './post.js';
@@ -121,6 +121,8 @@ function start() {
     let aspect = 1;
 
     function resize() {
+        // Re-read DPR: browser zoom and monitor moves can change it at runtime
+        pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
         const w = Math.max(1, Math.floor(window.innerWidth * pixelRatio * quality));
         const h = Math.max(1, Math.floor(window.innerHeight * pixelRatio * quality));
         if (post.scene && canvas.width === w && canvas.height === h) return;
@@ -320,7 +322,6 @@ function start() {
         document.documentElement.classList.add('no-webgl');
     });
 
-    ui.ready();
     requestAnimationFrame(loop);
 }
 

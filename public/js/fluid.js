@@ -112,6 +112,12 @@ export class Fluid {
         this.vao = vao;
         this.params = params;
         this.fmt = formats(gl, hasFloat);
+        // Velocity and pressure are signed; without float render targets they
+        // clamp to [0,1] and the sim silently renders wrong. Bail out instead
+        // so the caller can fall back to a neutral dummy texture.
+        if (this.fmt.rg.type === gl.UNSIGNED_BYTE) {
+            throw new Error('Fluid simulation requires float render targets');
+        }
         this.programs = Object.fromEntries(
             Object.entries({ SPLAT, ADVECT, DIVERGENCE, CURL, VORTICITY, PRESSURE, GRADIENT, FADE })
                 .map(([k, src]) => [k, createProgram(gl, FULLSCREEN_VS, src)])
@@ -148,7 +154,9 @@ export class Fluid {
         gl.disable(gl.BLEND);
         gl.disable(gl.DEPTH_TEST);
 
-        const radius = params.splatRadius / 100 * (this.aspect > 1 ? this.aspect : 1);
+        // The SPLAT shader already corrects d.x by aspect, so the radius stays
+        // in UV units — scaling it here too would make splats elliptical
+        const radius = params.splatRadius / 100;
         for (const s of this.splats) {
             const force = params.splatForce;
             pass(gl, vao, p.SPLAT, this.velocity.write, {

@@ -85,10 +85,12 @@ export class Post {
         this.extra.forEach((m) => m.dispose());
         this.scene = createTarget(gl, w, h, { ...fmt.rgba, depth: true });
         this.mips = [];
-        let mw = w >> 1, mh = h >> 1;
-        for (let i = 0; i < 6 && mw > 4 && mh > 4; i++) {
+        // Always keep at least one (tiny) bloom mip so render() never indexes
+        // an empty chain on very small canvases
+        let mw = Math.max(1, w >> 1), mh = Math.max(1, h >> 1);
+        for (let i = 0; i < 6 && mw >= 1 && mh >= 1; i++) {
             this.mips.push(createTarget(gl, mw, mh, fmt.rgba));
-            mw >>= 1; mh >>= 1;
+            mw = Math.max(1, mw >> 1); mh = Math.max(1, mh >> 1);
         }
         // Streaks: very wide, very short buffers so a few blur passes cover the whole screen width
         const sw = Math.max(8, w >> 2), sh = Math.max(8, h >> 3);
@@ -123,7 +125,7 @@ export class Post {
         const raysOn = (u.raysStrength ?? 0) > 0 || (u.lensDirt ?? 0) > 0;
         if (raysOn) {
             pass(gl, vao, p.rays, this.rays, {
-                uSource: mips[1].tex, uCenter: u.lightPos || [0.5, 0.5], uDensity: 0.8, uDecay: 0.95
+                uSource: (mips[1] || mips[0]).tex, uCenter: u.lightPos || [0.5, 0.5], uDensity: 0.8, uDecay: 0.95
             });
         }
 

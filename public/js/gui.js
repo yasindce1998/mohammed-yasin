@@ -20,7 +20,9 @@ export class Gui {
         this.build();
 
         window.addEventListener('keydown', (e) => {
-            if (e.key.toLowerCase() === 'g' && !e.target.closest?.('input, textarea')) this.toggle();
+            // Plain G only: no browser-shortcut combos (Ctrl/Cmd+G) or key repeat
+            if (e.key.toLowerCase() === 'g' && !e.metaKey && !e.ctrlKey && !e.altKey && !e.repeat
+                && !e.target.closest?.('input, textarea')) this.toggle();
         });
     }
 

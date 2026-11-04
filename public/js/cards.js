@@ -435,13 +435,6 @@ export class Cards {
 
             // Check if hit falls within card dimensions
             if (hitX >= -hw && hitX <= hw && hitY >= -hh && hitY <= hh) {
-                // Calculate world distance
-                const worldDist = Math.hypot(
-                    (rayOrigin[0] + rayDir[0] * t) - rayOrigin[0],
-                    (rayOrigin[1] + rayDir[1] * t) - rayOrigin[1],
-                    (rayOrigin[2] + rayDir[2] * t) - rayOrigin[2]
-                );
-
                 if (t < closestDist) {
                     closestDist = t;
                     const u = (hitX / CARD_W) + 0.5;
