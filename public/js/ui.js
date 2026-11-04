@@ -9,6 +9,8 @@ const GLYPHS = '01<>/\\[]{}#%&*+=-_ABCDEFGHJKLMNPRSTUVWXYZ';
 function decode(el, text, { duration = 800, delay = 0 } = {}) {
     if (!el) return;
     if (el._decodeRaf) cancelAnimationFrame(el._decodeRaf);
+    // Keep the real text available to assistive tech while it is scrambled
+    el.setAttribute('aria-label', text);
     if (reduceMotion) {
         el.textContent = text;
         return;
@@ -117,10 +119,16 @@ export class UI {
             // Deep link (#/project-id): jump the ribbon there and open its case study
             const linked = this.projects.findIndex(p => `#/${p.id}` === location.hash);
             if (linked !== -1) {
-                this.input.goTo(linked);
+                // goTo expects a slot in the filtered ribbon, not a project index
+                const slot = this.cards ? this.cards.visibleList.indexOf(linked) : linked;
+                this.input.goTo(slot === -1 ? 0 : slot);
                 setTimeout(() => this.openCaseStudy(this.projects[linked]), reduceMotion ? 0 : 1200);
             }
-            setTimeout(() => this.updateProjectUI(this.current, true), reduceMotion ? 0 : 800);
+            setTimeout(() => {
+                // this.current is a project index; map it back to its ribbon slot
+                const slot = this.cards ? this.cards.visibleList.indexOf(this.current) : this.current;
+                this.updateProjectUI(slot === -1 ? 0 : slot, true);
+            }, reduceMotion ? 0 : 800);
         };
 
         document.getElementById('enter-sound').addEventListener('click', () => go(true));
@@ -178,19 +186,20 @@ export class UI {
         if (!this.filterTabs) return;
         this.filterTabs.querySelectorAll('.tab-btn').forEach((btn) => {
             btn.addEventListener('click', () => {
+                // Only mark the tab active if the filter actually applied
+                if (!this.applyFilter(btn.dataset.filter)) return;
                 this.filterTabs.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
-                const filter = btn.dataset.filter;
                 this.audio.tick(1600);
-                this.applyFilter(filter);
             });
         });
     }
 
-    // Applies a category filter to the ribbon and re-anchors navigation
+    // Applies a category filter to the ribbon and re-anchors navigation.
+    // Returns false when the filter matches nothing (state left untouched).
     applyFilter(filter) {
         const cards = this.cards;
-        if (!cards) return;
+        if (!cards) return false;
 
         if (filter === 'ALL') {
             cards.setVisible(null);
@@ -199,7 +208,7 @@ export class UI {
             const indices = this.projects
                 .map((p, i) => p.category === filter ? i : -1)
                 .filter(i => i !== -1);
-            if (indices.length === 0) return;
+            if (indices.length === 0) return false;
             cards.setVisible(indices);
             this.input.visibleCount = indices.length;
         }
@@ -215,6 +224,7 @@ export class UI {
         // Hide pagination dots for filtered-out projects
         this.pagDots?.forEach((dot, i) =>
             dot.classList.toggle('filtered-out', cards.visibleList.indexOf(i) === -1));
+        return true;
     }
 
     initModals() {
@@ -236,8 +246,33 @@ export class UI {
             if (e.key === 'Escape') {
                 this.closeCaseStudy();
                 this.closeInfo();
+            } else if (e.key === 'Tab') {
+                // Keep focus inside whichever dialog is open
+                const modal = this.modalOpen ? this.modal : (this.infoOpen ? this.infoModal : null);
+                if (modal) this.trapFocus(e, modal);
             }
         });
+    }
+
+    // Simple focus trap: wraps Tab/Shift+Tab within the given modal
+    trapFocus(e, modal) {
+        const focusables = modal.querySelectorAll(
+            'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        );
+        if (focusables.length === 0) {
+            e.preventDefault();
+            return;
+        }
+        const first = focusables[0];
+        const last = focusables[focusables.length - 1];
+        const active = document.activeElement;
+        if (e.shiftKey && (active === first || !modal.contains(active))) {
+            e.preventDefault();
+            last.focus();
+        } else if (!e.shiftKey && (active === last || !modal.contains(active))) {
+            e.preventDefault();
+            first.focus();
+        }
     }
 
     setModalVisible(modal, visible, focusEl) {
@@ -418,10 +453,6 @@ export class UI {
 
         // Update pagination dots
         this.pagDots?.forEach((dot, i) => dot.classList.toggle('active', i === index));
-    }
-
-    ready() {
-        document.documentElement.classList.add('loaded');
     }
 
     update(dt, velocity) {

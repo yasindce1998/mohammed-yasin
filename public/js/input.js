@@ -135,8 +135,9 @@ export class Input {
 
         window.addEventListener('wheel', (e) => {
             if (e.target.closest?.('.gui, .modal')) return;
+            if (!this.enabled) return;   // don't hijack scrolling before the splash is dismissed
+            if (e.ctrlKey) return;       // let browser pinch/zoom gestures through
             e.preventDefault();
-            if (!this.enabled) return;
             const scale = e.deltaMode === 1 ? 28 : e.deltaMode === 2 ? window.innerHeight : 1;
             const wheelFactor = (this.params.wheelSpeed || 0.0016) * 0.45;
             const delta = (Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY) * scale;
