@@ -23,9 +23,17 @@ To add a project, append an entry to `PROJECTS` and add a matching `drawProjectA
 
 ## Features
 
+- **Boot sequence**: the enter screen reports real initialization work (shader compilation, GPGPU particle upload, per-project card rasterization) with a progress readout before unlocking the ENTER buttons.
+- **Dot-matrix splash title**: the name is sampled into a dot grid that converges on load, repels from the pointer, and scatters into the scene on entry.
+- **Pointer flashlight**: a soft cool glow follows the cursor across the graded scene (tunable as `flashlight` in the live panel).
 - **Category filters** (`ALL / OFFENSE / DEFENSE / RESEARCH`): filtered-out cards shrink and fade off the ribbon, and dragging, arrow keys and pagination only cycle through the visible set.
 - **Deep links**: `/#/<project-id>` (e.g. `/#/neurontrace`) jumps to that project and opens its case study once you enter. The hash updates as case studies open and close.
-- **Security-console card art**: every card is drawn procedurally on a canvas, with scan lines, terminal logs, and a schematic for its domain (agent toolchain, ring-0 mirror, container breakout, syscall fence, boot chain, eBPF↔WASM bridge, rogue-tower radar).
+- **Security-console card art**: every card is drawn procedurally on a canvas, with scan lines, terminal logs that type themselves as you hover, and a schematic for its domain (agent toolchain, ring-0 mirror, container breakout, syscall fence, boot chain, eBPF↔WASM bridge, rogue-tower radar).
+- **Click bursts**: selecting a card sprays accent-colored sparks toward the camera.
+- **HUD telemetry**: live FPS / particle count / render-quality readout next to the Bengaluru clock.
+- **Accessibility layer**: a visually hidden DOM mirror of the ribbon (revealed on focus) plus a polite live region announcing the focused project.
+- **Installable**: web app manifest with generated icons and iOS standalone meta tags.
+- **Self-hosted type**: Space Grotesk + Space Mono (SIL OFL, see [OFL.txt](public/fonts/OFL.txt)) with no external font requests.
 - **SEO**: Open Graph / Twitter meta tags and JSON-LD `Person` structured data.
 
 ## Deploying to Vercel
@@ -44,10 +52,18 @@ npx vercel --prod   # production
 | Momentum drag, fling, wheel, magnetic snap, keyboard nav | [input.js](public/js/input.js) |
 | 3D card ribbon, procedural card art, raycast hover, filtering | [cards.js](public/js/cards.js) |
 | Liquid ripple, chromatic aberration, click shockwave | [shaders/card.js](public/js/shaders/card.js) |
-| UI overlay, cursor, modals, filters, deep links | [ui.js](public/js/ui.js) |
+| UI overlay, cursor, modals, filters, deep links, a11y mirror | [ui.js](public/js/ui.js) |
+| Dot-matrix splash title | [splash.js](public/js/splash.js) |
+| Click-burst sparks | [burst.js](public/js/burst.js) |
 | GPU fluid simulation | [fluid.js](public/js/fluid.js) |
-| Bloom, streaks, tone mapping, grain | [post.js](public/js/post.js), [shaders/cinematic.js](public/js/shaders/cinematic.js) |
+| Bloom, streaks, tone mapping, grain, flashlight | [post.js](public/js/post.js), [shaders/cinematic.js](public/js/shaders/cinematic.js) |
 | Synthesized ticks, latches, modal transitions | [audio.js](public/js/audio.js) |
+
+Regenerate the PWA icons (zero-dependency PNG encoder) with:
+
+```bash
+node scripts/generate-icons.js
+```
 
 ## Live Parameter Panel (press **G**)
 

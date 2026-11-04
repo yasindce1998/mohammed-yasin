@@ -1,3 +1,27 @@
+@font-face {
+    font-family: "Space Grotesk";
+    src: url("/fonts/space-grotesk.woff2") format("woff2");
+    font-weight: 300 700;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "Space Mono";
+    src: url("/fonts/space-mono-400.woff2") format("woff2");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "Space Mono";
+    src: url("/fonts/space-mono-700.woff2") format("woff2");
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+}
+
 :root {
     --bg: #050508;
     --fg: #f5f5f8;
@@ -8,9 +32,60 @@
     --accent: #00f2fe;
     --ease: cubic-bezier(0.16, 1, 0.3, 1);
     --ease-out: cubic-bezier(0.25, 0.46, 0.45, 0.94);
-    --font: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    --font: "Space Grotesk", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --mono: "Space Mono", ui-monospace, "SF Mono", SFMono-Regular, Menlo, Monaco, Consolas, monospace;
     --pad: clamp(16px, 3.5vw, 48px);
+}
+
+/* Visually hidden but available to assistive tech */
+.sr-only {
+    position: absolute !important;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+.sr-only:focus-visible,
+.sr-only:focus-within {
+    position: fixed !important;
+    top: 12px;
+    left: 12px;
+    width: auto;
+    height: auto;
+    margin: 0;
+    padding: 10px 16px;
+    clip: auto;
+    overflow: visible;
+    white-space: normal;
+    background: rgba(10, 10, 16, 0.95);
+    border: 1px solid var(--accent);
+    border-radius: 6px;
+    color: var(--fg);
+    font-family: var(--mono);
+    font-size: 12px;
+    z-index: 200;
+}
+
+.sr-nav button {
+    display: block;
+    width: 100%;
+    padding: 4px 0;
+    background: none;
+    border: 0;
+    color: var(--fg);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.sr-nav button:hover,
+.sr-nav button:focus-visible {
+    color: var(--accent);
 }
 
 * { box-sizing: border-box; }
@@ -98,11 +173,44 @@ html:not(.entered), html:not(.entered) *,
 }
 
 .telemetry {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+    flex-shrink: 0;
+    white-space: nowrap;
     font-family: var(--mono);
     font-size: 11px;
     letter-spacing: 0.18em;
     color: var(--dim);
 }
+
+.telemetry-stats {
+    color: var(--dimmer);
+    font-variant-numeric: tabular-nums;
+}
+
+/* Viewport corner brackets */
+.frame {
+    position: fixed;
+    inset: 10px;
+    pointer-events: none;
+    z-index: 15;
+}
+
+.frame i {
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    border: 1px solid rgba(245, 245, 248, 0.22);
+}
+
+.frame i:nth-child(1) { top: 0; left: 0; border-right: none; border-bottom: none; }
+.frame i:nth-child(2) { top: 0; right: 0; border-left: none; border-bottom: none; }
+.frame i:nth-child(3) { bottom: 0; left: 0; border-right: none; border-top: none; }
+.frame i:nth-child(4) { bottom: 0; right: 0; border-left: none; border-top: none; }
+
+.no-webgl .frame { display: none; }
 
 .header-right {
     display: flex;
@@ -150,6 +258,40 @@ html:not(.entered), html:not(.entered) *,
 .pill:hover {
     border-color: var(--fg);
     background: rgba(255, 255, 255, 0.08);
+}
+
+.pill:disabled {
+    opacity: 0.35;
+    pointer-events: none;
+    cursor: default;
+}
+
+/* Slim, translucent scrollbars (modal + tuning panel) */
+.modal-container,
+.gui {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(245, 245, 248, 0.2) transparent;
+}
+
+.modal-container::-webkit-scrollbar,
+.gui::-webkit-scrollbar {
+    width: 6px;
+}
+
+.modal-container::-webkit-scrollbar-track,
+.gui::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.modal-container::-webkit-scrollbar-thumb,
+.gui::-webkit-scrollbar-thumb {
+    background: rgba(245, 245, 248, 0.2);
+    border-radius: 999px;
+}
+
+.modal-container::-webkit-scrollbar-thumb:hover,
+.gui::-webkit-scrollbar-thumb:hover {
+    background: rgba(245, 245, 248, 0.35);
 }
 
 .pill-primary {
@@ -750,6 +892,10 @@ html:not(.entered), html:not(.entered) *,
 .no-webgl .fallback h1 { color: var(--fg); letter-spacing: 0.3em; font-weight: 600; }
 .noscript { display: block; position: fixed; inset: auto 0 40% 0; text-align: center; }
 
+@media (max-width: 1260px) {
+    .brand-sub { display: none; }
+}
+
 @media (max-width: 860px) {
     .telemetry { display: none; }
     .modal-grid { grid-template-columns: 1fr; gap: 24px; }
@@ -765,6 +911,13 @@ html:not(.entered), html:not(.entered) *,
     .contact-links { flex-wrap: wrap; }
     .project-pagination { order: 3; flex-basis: 100%; justify-content: center; }
     #content { padding-bottom: 148px; }
+}
+
+@media (max-width: 380px) {
+    .top { padding: 0 12px; }
+    /* Icon-only sound toggle so the brand and About still fit */
+    #sound { padding: 0 10px; }
+    #sound span { display: none; }
 }
 
 @media (max-width: 600px) {

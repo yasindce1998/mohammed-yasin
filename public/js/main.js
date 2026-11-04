@@ -12,6 +12,8 @@ import { Input } from './input.js';
 import { Soundscape } from './audio.js';
 import { Gui } from './gui.js';
 import { UI } from './ui.js';
+import { SplashTitle } from './splash.js';
+import { Bursts } from './burst.js';
 import { PROJECTS, PARAMS, SCHEMA } from './config.js';
 import { NOISE } from './shaders/noise.js';
 
@@ -61,7 +63,7 @@ void main() {
 
 const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-function start() {
+async function start() {
     const canvas = document.getElementById('gl');
     const ctx = createContext(canvas);
     if (!ctx) {
@@ -70,6 +72,23 @@ function start() {
     }
     const { gl, hasFloat } = ctx;
 
+    // ---- Boot sequence UI: report real initialization work ----
+    const bootBar = document.getElementById('enter-progress-bar');
+    const bootLabel = document.getElementById('enter-progress-label');
+    const bootTrack = document.getElementById('enter-progress');
+    const enterButtons = [document.getElementById('enter-sound'), document.getElementById('enter-silent')];
+    const BOOT_TOTAL = 11;
+    let bootDone = 0;
+    const nextFrame = () => new Promise((resolve) => {
+        requestAnimationFrame(() => setTimeout(resolve, 0));
+    });
+    const boot = async (label) => {
+        bootDone++;
+        if (bootBar) bootBar.style.width = `${Math.min(100, (bootDone / BOOT_TOTAL) * 100)}%`;
+        if (bootLabel) bootLabel.textContent = label;
+        await nextFrame();
+    };
+
     const params = PARAMS;
     const gui = new Gui(params, SCHEMA);
     const input = new Input(canvas, { sections: PROJECTS.length, params });
@@ -77,23 +96,60 @@ function start() {
     const cards = new Cards(gl);
     const ui = new UI(PROJECTS, input, audio, gui, cards);
 
+    // Self-hosted fonts should be ready before card art samples them, but a
+    // stalled font request must never block the boot sequence
+    try {
+        await Promise.race([
+            document.fonts.ready,
+            new Promise((resolve) => setTimeout(resolve, 1500))
+        ]);
+    } catch (e) { /* fonts may be unavailable */ }
+
+    // Dot-matrix splash title (falls back to the plain h1 if canvas fails)
+    let splashTitle = null;
+    try {
+        const splashCanvas = document.getElementById('enter-canvas');
+        if (splashCanvas) {
+            splashTitle = new SplashTitle(splashCanvas, 'MOHAMMED YASIN', { reduceMotion });
+            if (!splashTitle.ctx) throw new Error('2D context unavailable');
+            splashTitle.init().catch(() => {});
+        }
+    } catch (e) {
+        splashTitle = null;
+        document.getElementById('enter-title')?.classList.remove('sr-only');
+    }
+
     const quadVao = gl.createVertexArray();
     const sky = createProgram(gl, FULLSCREEN_VS, SKY_FS);
+    await boot('BOOT // ATMOSPHERE ONLINE');
+
     const isMobile = matchMedia('(pointer: coarse)').matches;
 
     let particles;
     try {
         particles = new Particles(gl, quadVao, hasFloat, isMobile ? 32768 : 65536);
+        await boot(`BOOT // PARTICLES ${particles.count}`);
     } catch (e) {
         console.warn('Particles disabled:', e);
-        particles = { update() {}, draw() {} };
+        particles = { update() {}, draw() {}, count: 0 };
+        await boot('BOOT // PARTICLES OFFLINE');
     }
 
     const post = new Post(gl, quadVao, hasFloat);
 
+    let bursts;
+    try {
+        bursts = new Bursts(gl);
+    } catch (e) {
+        console.warn('Click bursts disabled:', e);
+        bursts = { spawn() {}, update() {}, draw() {} };
+    }
+    await boot('BOOT // LENS STACK');
+
     let fluid;
     try {
         fluid = new Fluid(gl, quadVao, hasFloat, params);
+        await boot('BOOT // FLUID SOLVER');
     } catch (e) {
         console.warn('Fluid simulation fallback:', e);
         const dummyTex = createTexture(gl, 2, 2, { internal: gl.RGBA8, format: gl.RGBA, type: gl.UNSIGNED_BYTE });
@@ -104,6 +160,13 @@ function start() {
             velocity: { read: { tex: dummyTex } },
             dye: { read: { tex: dummyTex } }
         };
+        await boot('BOOT // FLUID OFFLINE');
+    }
+
+    // Card art is the slowest real step: one full canvas poster per project
+    for (let i = 0; i < PROJECTS.length; i++) {
+        cards.initTexture(i);
+        await boot(`BOOT // CARD ART ${String(i + 1).padStart(2, '0')}/${String(PROJECTS.length).padStart(2, '0')}`);
     }
 
     const camera = {
@@ -141,6 +204,7 @@ function start() {
         intro.started = true;
         input.enabled = true;
         if (withSound) audio.start();
+        splashTitle?.scatter();
     };
 
     // Click on canvas triggers card selection / case study modal
@@ -149,12 +213,25 @@ function start() {
         const hit = cards.hitTest(input.pointer, camera, aspect);
         if (hit) {
             cards.triggerClick(hit.cardIndex, hit.uv);
-            ui.openCaseStudy(hit.project);
+            if (!reduceMotion && hit.world) {
+                bursts.spawn(hit.world, hexToRgb(hit.project.accent), camera.pos);
+                // Let the sparks read for a beat before the backdrop covers them
+                setTimeout(() => ui.openCaseStudy(hit.project), 200);
+            } else {
+                ui.openCaseStudy(hit.project);
+            }
         }
     });
 
+    // Boot complete: unlock the enter buttons and start rendering
+    enterButtons.forEach((b) => { if (b) b.disabled = false; });
+    if (bootLabel) bootLabel.textContent = 'BOOT // SYSTEMS ONLINE';
+    if (bootTrack) bootTrack.classList.add('done');
+    const telemetryStats = document.getElementById('telemetry-stats');
+
     let lastSection = input.activeIndex;
     let lastScrollInt = Math.floor(input.scroll.current);
+    let lastStats = 0;
     let last = performance.now();
     let time = 0;
 
@@ -288,7 +365,11 @@ function start() {
             [0.12 * dustIntensity, 0.14 * dustIntensity, 0.18 * dustIntensity]
         ], pixelRatio * quality, 8.0, 0.12);
 
-        // 4. Post-processing (Bloom, Grade, ACES Tone Mapping, Grain)
+        // 4. Click-burst sparks (in front of the ribbon)
+        bursts.update(dt);
+        bursts.draw(camera, pixelRatio * quality);
+
+        // 5. Post-processing (Bloom, Grade, ACES Tone Mapping, Grain)
         post.render(fluid, {
             ...params,
             time,
@@ -298,12 +379,24 @@ function start() {
             streakStrength: 0.15,
             streakTint: accentCol,
             raysStrength: 0,
-            lightPos: [0.5, 0.5]
+            lightPos: [p.x, 1 - p.y],
+            // Touch devices have no persistent cursor, so the glow would sit
+            // wherever the last tap landed
+            flashlight: isMobile ? 0 : (params.flashlight ?? 0) * introE
         });
 
         // Audio & UI updates
         audio.update(input.scroll.speed, p.speed);
         ui.update(dt, input.scroll.speed);
+
+        // HUD telemetry readout (twice a second)
+        if (time - lastStats > 0.5) {
+            lastStats = time;
+            if (telemetryStats) {
+                const fps = Math.round(1000 / Math.max(frameAvg, 4));
+                telemetryStats.textContent = `${fps} FPS · ${particles.count || 0} PTCL · Q${quality.toFixed(2)}`;
+            }
+        }
 
         p.moved = p.moved && p.speed > 0.001;
     }
@@ -325,11 +418,9 @@ function start() {
     requestAnimationFrame(loop);
 }
 
-try {
-    start();
-} catch (err) {
+start().catch((err) => {
     console.error('WebGL Initialization Error:', err);
     const p = document.querySelector('.fallback p');
     if (p) p.textContent = `Initialization notice: ${err.message || err}`;
     document.documentElement.classList.add('no-webgl');
-}
+});

@@ -161,7 +161,9 @@ export class Post {
             uTime: u.time ?? 0.0,
             uResolution: [this.w, this.h],
             uFlash: u.flash ?? 0.0,
-            uFade: u.fade ?? 1.0
+            uFade: u.fade ?? 1.0,
+            uLight: u.lightPos || [0.5, 0.5],
+            uFlashlight: u.flashlight ?? 0.0
         });
     }
 }

@@ -188,6 +188,7 @@ export const PARAMS = {
     exposure: 0.95,
     grain: 0.045,
     vignette: 0.85,
+    flashlight: 0.45,
 
     // Environment & Camera
     dustIntensity: 0.75,
@@ -225,7 +226,8 @@ export const SCHEMA = {
         bloomThreshold: [0.5, 2.5, 0.05],
         exposure: [0.5, 2, 0.02],
         grain: [0, 0.2, 0.002],
-        vignette: [0, 1, 0.02]
+        vignette: [0, 1, 0.02],
+        flashlight: [0, 1.5, 0.02]
     },
     Atmosphere: {
         dustIntensity: [0, 2, 0.02],

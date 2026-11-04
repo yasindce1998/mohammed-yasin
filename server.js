@@ -46,7 +46,8 @@ const MIME_TYPES = {
     '.ogg': 'audio/ogg',
     '.wav': 'audio/wav',
     '.xml': 'application/xml',
-    '.txt': 'text/plain; charset=UTF-8'
+    '.txt': 'text/plain; charset=UTF-8',
+    '.webmanifest': 'application/manifest+json; charset=UTF-8'
 };
 
 function sendError(res, status, message) {
