@@ -1,13 +1,17 @@
 {
+  "id": "/",
   "name": "Mohammed Yasin — Security Engineer & Digital Architect",
   "short_name": "Mohammed Yasin",
   "description": "Kernel-level offense, cloud-native defense. Interactive WebGL portfolio.",
+  "lang": "en",
+  "dir": "ltr",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "any",
   "background_color": "#050508",
   "theme_color": "#050508",
+  "categories": ["portfolio", "security", "developer"],
   "icons": [
     {
       "src": "/assets/meta/icon-192.png",

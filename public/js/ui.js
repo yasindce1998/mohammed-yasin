@@ -1,7 +1,8 @@
 // Portfolio UI, Dynamic Cursor & Case Study Modal
 
 import { damp } from './math.js';
-import { OWNER, EXPERIENCE, CLIENT_WORK } from './config.js';
+import { OWNER, ABOUT, EXPERIENCE, CLIENT_WORK } from './config.js';
+import { track } from './analytics.js';
 
 const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const GLYPHS = '01<>/\\[]{}#%&*+=-_ABCDEFGHJKLMNPRSTUVWXYZ';
@@ -43,7 +44,10 @@ export class UI {
         this.gui = gui;
         this.cards = cards;
 
-        this.current = 0;
+        // -1 forces the first updateProjectUI(0) call to populate the counter,
+        // subtitle, accent, and aria-label from config instead of trusting the
+        // hand-written defaults in index.html.
+        this.current = -1;
         this.onEnter = null;
         this.entered = false;
         this.modalOpen = false;
@@ -77,6 +81,7 @@ export class UI {
         this.modalDesc = document.getElementById('modal-desc');
         this.modalYear = document.getElementById('modal-year');
         this.modalTags = document.getElementById('modal-tags');
+        this.modalFullPage = document.getElementById('modal-fullpage');
 
         // Info modal
         this.infoModal = document.getElementById('info-modal');
@@ -167,6 +172,7 @@ export class UI {
         this.pagination.innerHTML = '';
         this.pagDots = this.projects.map((p, i) => {
             const btn = document.createElement('button');
+            btn.type = 'button';
             btn.className = `pag-dot ${i === 0 ? 'active' : ''}`;
             btn.textContent = p.num;
             btn.setAttribute('aria-label', `Navigate to ${p.title}`);
@@ -192,6 +198,7 @@ export class UI {
                 this.filterTabs.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
                 this.audio.tick(1600);
+                track('filter', { category: btn.dataset.filter });
             });
         });
     }
@@ -290,6 +297,7 @@ export class UI {
             const btn = document.createElement('button');
             btn.type = 'button';
             btn.textContent = `${p.num}. ${p.title} — ${p.tagline}`;
+            btn.setAttribute('aria-haspopup', 'dialog');
             btn.addEventListener('click', () => {
                 const slot = this.cards ? this.cards.visibleList.indexOf(i) : i;
                 if (slot !== -1) this.input.goTo(slot);
@@ -301,14 +309,25 @@ export class UI {
         document.body.appendChild(nav);
     }
 
+    // Keep the page behind a dialog out of the tab order and the accessibility
+    // tree. `inert` is supported in every browser targeted by this site.
+    setBackgroundInert(on) {
+        document.querySelectorAll('header.top, .bottom-bar, #content, .frame').forEach((el) => {
+            if (on) el.setAttribute('inert', '');
+            else el.removeAttribute('inert');
+        });
+    }
+
     setModalVisible(modal, visible, focusEl) {
         modal.classList.toggle('active', visible);
         modal.setAttribute('aria-hidden', String(!visible));
         this.input.locked = this.modalOpen || this.infoOpen;
+        const anyOpen = this.modalOpen || this.infoOpen;
+        if (visible) this.lastFocus = document.activeElement;
+        this.setBackgroundInert(anyOpen);
         if (visible) {
-            this.lastFocus = document.activeElement;
             focusEl?.focus({ preventScroll: true });
-        } else {
+        } else if (!anyOpen) {
             this.lastFocus?.focus?.({ preventScroll: true });
         }
     }
@@ -318,6 +337,7 @@ export class UI {
         this.infoOpen = true;
         this.setModalVisible(this.infoModal, true, this.infoClose);
         this.audio.tick(2000);
+        track('about:open');
     }
 
     closeInfo() {
@@ -331,6 +351,18 @@ export class UI {
     initAboutContent() {
         if (this._aboutPopulated) return;
         this._aboutPopulated = true;
+
+        const summary = document.getElementById('info-summary');
+        if (summary && ABOUT?.summary) summary.textContent = ABOUT.summary;
+
+        const stats = document.getElementById('info-stats');
+        if (stats && ABOUT?.stats) {
+            stats.innerHTML = ABOUT.stats.map(s => `
+                <div class="stat">
+                    <strong>${s.value}</strong>
+                    <span>${s.label}</span>
+                </div>`).join('');
+        }
 
         const expList = document.getElementById('exp-list');
         if (expList) {
@@ -404,6 +436,7 @@ export class UI {
     openCaseStudy(project) {
         if (!project || this.modalOpen) return;
         this.modalOpen = true;
+        this.originalTitle = this.originalTitle || document.title;
 
         this.modalMeta.textContent = `[ ${project.num} // ${project.category} · ${project.year} ]`;
         this.modalTitle.textContent = project.title;
@@ -421,6 +454,7 @@ export class UI {
             launch.href = project.url;
             launch.textContent = 'VIEW SOURCE ↗';
         }
+        if (this.modalFullPage) this.modalFullPage.href = `/work/${project.id}/`;
 
         // Accent glow
         const accent = project.accent || '#00f2fe';
@@ -435,19 +469,27 @@ export class UI {
 
         this.setModalVisible(this.modal, true, this.modalClose);
         this.modal.querySelector('.modal-container').scrollTop = 0;
+        document.title = `${project.title} — Mohammed Yasin`;
         history.replaceState(null, '', `#/${project.id}`);
         this.setCursorState('close');
         this.audio.modalOpen();
+        track('project:open', {
+            id: project.id,
+            title: project.title,
+            category: project.category
+        });
     }
 
     closeCaseStudy() {
         if (!this.modalOpen) return;
         this.modalOpen = false;
         this.setModalVisible(this.modal, false);
+        document.title = this.originalTitle || document.title;
         history.replaceState(null, '', location.pathname);
         document.documentElement.style.setProperty('--accent', this.projects[this.current].accent);
         this.setCursorState('drag');
         this.audio.modalClose();
+        track('project:close', { id: this.projects[this.current]?.id });
     }
 
     updateProjectUI(logicalIndex, force = false) {

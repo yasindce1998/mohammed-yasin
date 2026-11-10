@@ -54,6 +54,8 @@ in vec3 vViewPos;
 in vec3 vWorldPos;
 
 uniform sampler2D uTexture;
+uniform sampler2D uLogTexture;
+uniform vec4 uLogRect;  // xy: uv origin, zw: uv size
 uniform vec3 uAccent;
 uniform vec2 uPointer; // Normalized pointer [0..1] on card
 uniform float uHover;   // 0..1 smooth hover state
@@ -103,6 +105,16 @@ void main() {
     float g = texture(uTexture, clamp(uvG, 0.001, 0.999)).g;
     float b = texture(uTexture, clamp(uvB, 0.001, 0.999)).b;
     vec3 col = vec3(r, g, b);
+
+    // 4b. Composite the typed terminal log overlay. The base poster excludes
+    //     this region, so only the small log texture needs re-uploading on hover.
+    if (uLogRect.z > 0.0) {
+        vec2 logUv = (uv - uLogRect.xy) / uLogRect.zw;
+        if (logUv.x >= 0.0 && logUv.x <= 1.0 && logUv.y >= 0.0 && logUv.y <= 1.0) {
+            vec4 logSample = texture(uLogTexture, logUv);
+            col = mix(col, logSample.rgb, logSample.a);
+        }
+    }
     
     // 5. Border frame highlight (minimalist geometric edge)
     vec2 edgeDist = min(uv, 1.0 - uv);

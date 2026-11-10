@@ -3,3 +3,6 @@ node_modules/
 .DS_Store
 *.log
 .env*
+test-results/
+playwright-report/
+tests/.config.tmp.mjs

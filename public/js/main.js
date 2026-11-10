@@ -15,6 +15,7 @@ import { UI } from './ui.js';
 import { SplashTitle } from './splash.js';
 import { Bursts } from './burst.js';
 import { PROJECTS, PARAMS, SCHEMA } from './config.js';
+import { track } from './analytics.js';
 import { NOISE } from './shaders/noise.js';
 
 // Deep-space luxury atmosphere: subtle ambient cosmic dust and directional vignette
@@ -62,12 +63,15 @@ void main() {
 `;
 
 const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const ACCENTS = PROJECTS.map((p) => hexToRgb(p.accent));
 
 async function start() {
     const canvas = document.getElementById('gl');
     const ctx = createContext(canvas);
     if (!ctx) {
         document.documentElement.classList.add('no-webgl');
+        window.__portfolioBoot = 'static';
+        window.dispatchEvent(new CustomEvent('portfolio:boot-settled'));
         return;
     }
     const { gl, hasFloat } = ctx;
@@ -105,18 +109,25 @@ async function start() {
         ]);
     } catch (e) { /* fonts may be unavailable */ }
 
-    // Dot-matrix splash title (falls back to the plain h1 if canvas fails)
+    // Dot-matrix splash title. The plain h1 stays visible until the canvas has
+    // actually drawn, so the page never shows a blank enter screen if JS or
+    // canvas initialisation stalls.
     let splashTitle = null;
+    const enterTitle = document.getElementById('enter-title');
     try {
         const splashCanvas = document.getElementById('enter-canvas');
         if (splashCanvas) {
             splashTitle = new SplashTitle(splashCanvas, 'MOHAMMED YASIN', { reduceMotion });
             if (!splashTitle.ctx) throw new Error('2D context unavailable');
-            splashTitle.init().catch(() => {});
+            splashTitle.init()
+                .then(() => {
+                    enterTitle?.classList.add('sr-only');
+                    document.getElementById('enter')?.classList.add('has-canvas');
+                })
+                .catch(() => { /* keep the visible h1 */ });
         }
     } catch (e) {
         splashTitle = null;
-        document.getElementById('enter-title')?.classList.remove('sr-only');
     }
 
     const quadVao = gl.createVertexArray();
@@ -178,14 +189,17 @@ async function start() {
         fov: params.fov
     };
 
-    let pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
-    let quality = 1;
+    // Cap the render buffer lower on phones: a 3x DPR screen at 2x is already
+    // 4x the pixels of a 1x screen, and the fluid/post stack is fill-rate bound.
+    const maxDpr = isMobile ? 1.5 : 2;
+    let pixelRatio = Math.min(window.devicePixelRatio || 1, maxDpr);
+    let quality = isMobile ? 0.85 : 1;
     let frameAvg = 16;
     let aspect = 1;
 
     function resize() {
         // Re-read DPR: browser zoom and monitor moves can change it at runtime
-        pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
+        pixelRatio = Math.min(window.devicePixelRatio || 1, maxDpr);
         const w = Math.max(1, Math.floor(window.innerWidth * pixelRatio * quality));
         const h = Math.max(1, Math.floor(window.innerHeight * pixelRatio * quality));
         if (post.scene && canvas.width === w && canvas.height === h) return;
@@ -205,6 +219,10 @@ async function start() {
         input.enabled = true;
         if (withSound) audio.start();
         splashTitle?.scatter();
+        track('enter', { sound: withSound, motion: reduceMotion ? 'reduced' : 'full' });
+        // Move keyboard focus into the experience instead of leaving it on the
+        // now-hidden splash button.
+        document.getElementById('content')?.focus({ preventScroll: true });
     };
 
     // Click on canvas triggers card selection / case study modal
@@ -214,7 +232,7 @@ async function start() {
         if (hit) {
             cards.triggerClick(hit.cardIndex, hit.uv);
             if (!reduceMotion && hit.world) {
-                bursts.spawn(hit.world, hexToRgb(hit.project.accent), camera.pos);
+                bursts.spawn(hit.world, ACCENTS[hit.cardIndex] || ACCENTS[0], camera.pos);
                 // Let the sparks read for a beat before the backdrop covers them
                 setTimeout(() => ui.openCaseStudy(hit.project), 200);
             } else {
@@ -229,13 +247,34 @@ async function start() {
     if (bootTrack) bootTrack.classList.add('done');
     const telemetryStats = document.getElementById('telemetry-stats');
 
+    window.__portfolioBoot = 'ready';
+    window.dispatchEvent(new CustomEvent('portfolio:boot-ready'));
+    // The dialog's primary actions are now enabled; put focus on the silent
+    // action so keyboard/screen-reader users are not stranded on the splash.
+    document.getElementById('enter-silent')?.focus({ preventScroll: true });
+
     let lastSection = input.activeIndex;
     let lastScrollInt = Math.floor(input.scroll.current);
     let lastStats = 0;
     let last = performance.now();
     let time = 0;
+    let paused = false;
+
+    // Stop GPU/audio work in background tabs. rAF is throttled by browsers, but
+    // the audio graph keeps running unless the context is suspended.
+    document.addEventListener('visibilitychange', () => {
+        paused = document.hidden;
+        last = performance.now();
+        if (!audio.ctx) return;
+        if (paused) audio.ctx.suspend?.().catch?.(() => {});
+        else if (audio.enabled) audio.ctx.resume?.().catch?.(() => {});
+    });
 
     function frame(now) {
+        if (paused) {
+            last = now;
+            return;
+        }
         const dt = Math.min((now - last) / 1000, 0.1);
         last = now;
         time += dt;
@@ -256,8 +295,7 @@ async function start() {
         input.update(dt);
         // input.activeIndex is a slot in the filtered ribbon; map to the project
         const activeIdx = cards.visibleList[input.activeIndex] ?? 0;
-        const activeProj = PROJECTS[activeIdx] || PROJECTS[0];
-        const accentCol = hexToRgb(activeProj.accent);
+        const accentCol = ACCENTS[activeIdx] || ACCENTS[0];
 
         // Trigger section UI and audio updates
         if (activeIdx !== lastSection) {
@@ -413,14 +451,22 @@ async function start() {
     canvas.addEventListener('webglcontextlost', (e) => {
         e.preventDefault();
         document.documentElement.classList.add('no-webgl');
+        window.__portfolioBoot = 'static';
+        window.dispatchEvent(new CustomEvent('portfolio:boot-settled'));
     });
+
+    canvas.addEventListener('webglcontextrestored', () => location.reload());
 
     requestAnimationFrame(loop);
 }
 
 start().catch((err) => {
     console.error('WebGL Initialization Error:', err);
-    const p = document.querySelector('.fallback p');
+    const p = document.getElementById('fallback-message');
     if (p) p.textContent = `Initialization notice: ${err.message || err}`;
     document.documentElement.classList.add('no-webgl');
+    window.__portfolioBoot = 'error';
+    window.dispatchEvent(new CustomEvent('portfolio:boot-error', {
+        detail: { message: err.message || String(err) }
+    }));
 });

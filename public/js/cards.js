@@ -15,6 +15,21 @@ import {
 export const CARD_W = 4.2;
 const CARD_H = 2.65;
 
+// Card art is a full-size poster; the terminal log lines live in a much smaller
+// texture that is the only thing re-uploaded while a card is hovered.
+const TEX_W = 1024;
+const TEX_H = 640;
+const LOG_W = 640;
+const LOG_H = 100;
+const LOG_X = 40;
+const LOG_Y = 88;
+export const LOG_RECT = [
+    LOG_X / TEX_W,
+    1 - (LOG_Y + LOG_H) / TEX_H,
+    LOG_W / TEX_W,
+    LOG_H / TEX_H
+];
+
 const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 export class Cards {
@@ -23,7 +38,9 @@ export class Cards {
         this.projects = PROJECTS;
         this.program = createProgram(gl, CARD_VS, CARD_FS);
         this.textures = [];
+        this.logTextures = [];
         this.cardStates = [];
+        this.sorted = [];
         this.hoveredIndex = -1;
         this.hoveredUv = [0.5, 0.5];
         this.hoveredCard = null;
@@ -31,6 +48,8 @@ export class Cards {
         this.initGeometry();
         this.initStates();
         this.textures = new Array(this.projects.length).fill(null);
+        this.logTextures = new Array(this.projects.length).fill(null);
+        this.sorted = this.cardStates.slice();
 
         // Category filtering: null = all projects visible
         this.visible = null;
@@ -107,19 +126,37 @@ export class Cards {
         const p = this.projects[i];
 
         const canvas = document.createElement('canvas');
-        canvas.width = 1024;
-        canvas.height = 640;
+        canvas.width = TEX_W;
+        canvas.height = TEX_H;
         const ctx = canvas.getContext('2d');
 
-        this.renderCardGraphic(ctx, p, canvas.width, canvas.height, 1);
+        // The log overlay has its own texture, so the expensive poster art is
+        // rendered exactly once per project.
+        this.renderCardGraphic(ctx, p, canvas.width, canvas.height, null);
 
-        // Keep the canvas around so hover can re-render the terminal logs
+        const logCanvas = document.createElement('canvas');
+        logCanvas.width = LOG_W;
+        logCanvas.height = LOG_H;
+        const logCtx = logCanvas.getContext('2d');
+        this.renderLogGraphic(logCtx, p, LOG_W, LOG_H, 1);
+
+        // Keep the canvases around so hover can re-render only the log layer
         const state = this.cardStates[i];
         if (state) {
             state.canvas = canvas;
             state.ctx = ctx;
+            state.logCanvas = logCanvas;
+            state.logCtx = logCtx;
         }
 
+        const tex = this.uploadCanvas(gl, canvas);
+        const logTex = this.uploadCanvas(gl, logCanvas);
+        this.textures[i] = tex;
+        this.logTextures[i] = logTex;
+        return tex;
+    }
+
+    uploadCanvas(gl, canvas) {
         const tex = gl.createTexture();
         gl.bindTexture(gl.TEXTURE_2D, tex);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
@@ -130,15 +167,39 @@ export class Cards {
         gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, canvas);
         gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
-
-        this.textures[i] = tex;
         return tex;
     }
 
-    // Re-renders a card's logs at a given typing progress and re-uploads it
+    // Terminal log layer. Transparent background keeps the base poster intact
+    // when the shader composites the two textures.
+    renderLogGraphic(ctx, project, w, h, logProgress = 1) {
+        const accent = project.accent || '#00f2fe';
+        ctx.clearRect(0, 0, w, h);
+        ctx.font = '400 12px "Space Mono", ui-monospace, monospace';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'top';
+
+        const logs = project.logs || [];
+        let remaining = Math.round(logs.reduce((n, l) => n + l.length, 0) * Math.max(0, Math.min(1, logProgress)));
+        logs.forEach((line, i) => {
+            const count = Math.max(0, Math.min(line.length, remaining));
+            const shown = line.slice(0, count);
+            remaining -= line.length;
+            const isAlert = /BLOCKED|DETECTED|LOW|escape/i.test(line);
+            ctx.fillStyle = isAlert ? 'rgba(255, 80, 90, 0.8)' : `${accent}cc`;
+            ctx.fillText(shown, 8, 8 + i * 22);
+            if (count > 0 && count < line.length) {
+                const cw = ctx.measureText(shown).width;
+                ctx.fillRect(8 + cw + 2, 8 + i * 22, 7, 12);
+            }
+        });
+    }
+
+    // Re-renders a card's logs at a given typing progress and re-uploads only
+    // the 640x100 log texture instead of the full 1024x640 poster.
     updateCardLogs(i, time) {
         const card = this.cardStates[i];
-        if (!card || !card.ctx || !this.textures[i]) return;
+        if (!card || !card.logCtx || !this.logTextures[i]) return;
 
         let progress = 1;
         if (time !== Infinity) {
@@ -150,12 +211,12 @@ export class Cards {
             progress = phase >= typeDur ? 1 : phase / typeDur;
         }
 
-        this.renderCardGraphic(card.ctx, card.project, card.canvas.width, card.canvas.height, progress);
+        this.renderLogGraphic(card.logCtx, card.project, card.logCanvas.width, card.logCanvas.height, progress);
 
         const gl = this.gl;
-        gl.bindTexture(gl.TEXTURE_2D, this.textures[i]);
+        gl.bindTexture(gl.TEXTURE_2D, this.logTextures[i]);
         gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, card.canvas);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, card.logCanvas);
         gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
     }
 
@@ -209,26 +270,27 @@ export class Cards {
         this.drawProjectArt(ctx, project.id, accent);
         ctx.restore();
 
-        // Terminal log lines (top-left, under index)
-        ctx.font = '400 12px "Space Mono", ui-monospace, monospace';
-        ctx.textAlign = 'left';
-        ctx.textBaseline = 'top';
-        const logs = project.logs || [];
-        // Type-on animation: reveal a fraction of the total characters across
-        // all lines, with a block cursor at the active position
-        let remaining = Math.round(logs.reduce((n, l) => n + l.length, 0) * Math.max(0, Math.min(1, logProgress)));
-        logs.forEach((line, i) => {
-            const count = Math.max(0, Math.min(line.length, remaining));
-            const shown = line.slice(0, count);
-            remaining -= line.length;
-            const isAlert = /BLOCKED|DETECTED|LOW|escape/i.test(line);
-            ctx.fillStyle = isAlert ? 'rgba(255, 80, 90, 0.75)' : `${accent}aa`;
-            ctx.fillText(shown, 48, 96 + i * 22);
-            if (count > 0 && count < line.length) {
-                const cw = ctx.measureText(shown).width;
-                ctx.fillRect(48 + cw + 2, 96 + i * 22, 7, 12);
-            }
-        });
+        // Terminal log lines live in a separate overlay texture (renderLogGraphic).
+        // Passing null skips them entirely for the static poster.
+        if (logProgress !== null) {
+            ctx.font = '400 12px "Space Mono", ui-monospace, monospace';
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'top';
+            const logs = project.logs || [];
+            let remaining = Math.round(logs.reduce((n, l) => n + l.length, 0) * Math.max(0, Math.min(1, logProgress)));
+            logs.forEach((line, i) => {
+                const count = Math.max(0, Math.min(line.length, remaining));
+                const shown = line.slice(0, count);
+                remaining -= line.length;
+                const isAlert = /BLOCKED|DETECTED|LOW|escape/i.test(line);
+                ctx.fillStyle = isAlert ? 'rgba(255, 80, 90, 0.75)' : `${accent}aa`;
+                ctx.fillText(shown, 48, 96 + i * 22);
+                if (count > 0 && count < line.length) {
+                    const cw = ctx.measureText(shown).width;
+                    ctx.fillRect(48 + cw + 2, 96 + i * 22, 7, 12);
+                }
+            });
+        }
 
         // Top Left: Project Index & Category
         ctx.font = '600 13px "Space Mono", ui-monospace, monospace';
@@ -618,8 +680,10 @@ export class Cards {
         gl.enable(gl.BLEND);
         gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
-        // Sort cards by camera distance (draw back to front)
-        const sorted = [...this.cardStates].sort((a, b) => {
+        // Sort cards by camera distance (draw back to front). Reuse one array
+        // so the render loop does not allocate a new list every frame.
+        const sorted = this.sorted;
+        sorted.sort((a, b) => {
             const da = Math.hypot(camera.pos[0] - a.pos[0], camera.pos[2] - a.pos[2]);
             const db = Math.hypot(camera.pos[0] - b.pos[0], camera.pos[2] - b.pos[2]);
             return db - da;
@@ -634,6 +698,8 @@ export class Cards {
                 uView: camera.view,
                 uProj: camera.proj,
                 uTexture: tex,
+                uLogTexture: this.logTextures[card.index],
+                uLogRect: LOG_RECT,
                 uAccent: card.accent,
                 uPointer: card.pointer,
                 uHover: card.hover,

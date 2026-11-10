@@ -2,12 +2,20 @@
   "name": "mohammed-yasin",
   "version": "1.0.0",
   "private": true,
-  "description": "Zero-dependency local static dev server",
+  "description": "Zero-dependency WebGL portfolio with a generated static layer",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "build": "node scripts/build-static.js",
+    "icons": "node scripts/generate-icons.js",
+    "test:static": "node --test tests/static.test.cjs",
+    "test:e2e": "node tests/smoke.cjs",
+    "test": "npm run build && npm run test:static && npm run test:e2e"
   },
   "engines": {
-    "node": ">=16"
+    "node": ">=18"
+  },
+  "devDependencies": {
+    "playwright": "^1.50.0"
   }
 }

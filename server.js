@@ -50,9 +50,42 @@ const MIME_TYPES = {
     '.webmanifest': 'application/manifest+json; charset=UTF-8'
 };
 
+const SECURITY_HEADERS = {
+    'X-Content-Type-Options': 'nosniff',
+    'Referrer-Policy': 'strict-origin-when-cross-origin',
+    'X-Frame-Options': 'SAMEORIGIN',
+    'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
+    'Cross-Origin-Opener-Policy': 'same-origin',
+    'Content-Security-Policy': [
+        "default-src 'self'",
+        "script-src 'self'",
+        "style-src 'self' 'unsafe-inline'",
+        "img-src 'self' data:",
+        "font-src 'self'",
+        "connect-src 'self'",
+        "media-src 'self'",
+        "worker-src 'self'",
+        "manifest-src 'self'",
+        "base-uri 'none'",
+        "form-action 'self'",
+        "frame-ancestors 'self'"
+    ].join('; ')
+};
+
 function sendError(res, status, message) {
-    res.writeHead(status, { 'Content-Type': 'text/plain; charset=UTF-8' });
+    res.writeHead(status, { ...SECURITY_HEADERS, 'Content-Type': 'text/plain; charset=UTF-8' });
     res.end(`${status} ${message}\n`);
+}
+
+function cacheControlFor(ext) {
+    if (ext === '.html' || ext === '.htm') return 'no-cache';
+    if (ext === '.woff' || ext === '.woff2' || ext === '.otf' || ext === '.ttf') {
+        return 'public, max-age=31536000, immutable';
+    }
+    if (ext === '.js' || ext === '.css' || ext === '.png' || ext === '.webmanifest') {
+        return 'public, max-age=3600, stale-while-revalidate=86400';
+    }
+    return 'no-cache';
 }
 
 // Resolves a URL path to a file inside ROOT_DIR, or null if it would escape it.
@@ -81,26 +114,27 @@ function parseRange(header, size) {
     return { start, end };
 }
 
-function serveFile(filePath, stat, req, res) {
+function serveFile(filePath, stat, req, res, statusOverride = 0) {
     const ext = path.extname(filePath).toLowerCase();
     const headers = {
+        ...SECURITY_HEADERS,
         'Content-Type': MIME_TYPES[ext] || 'application/octet-stream',
         'Accept-Ranges': 'bytes',
         'Last-Modified': stat.mtime.toUTCString(),
-        'Cache-Control': 'no-cache'
+        'Cache-Control': cacheControlFor(ext)
     };
 
     const since = req.headers['if-modified-since'];
-    if (since && !req.headers.range && Math.floor(stat.mtimeMs / 1000) <= Math.floor(Date.parse(since) / 1000)) {
+    if (!statusOverride && since && !req.headers.range && Math.floor(stat.mtimeMs / 1000) <= Math.floor(Date.parse(since) / 1000)) {
         res.writeHead(304, headers);
         return res.end();
     }
 
-    let status = 200;
+    let status = statusOverride || 200;
     let streamOpts = {};
     headers['Content-Length'] = stat.size;
 
-    if (req.headers.range) {
+    if (req.headers.range && !statusOverride) {
         const range = parseRange(req.headers.range, stat.size);
         if (!range) {
             res.writeHead(416, { 'Content-Range': `bytes */${stat.size}` });
@@ -150,14 +184,13 @@ const server = http.createServer((req, res) => {
         stat = tryStat(filePath);
     }
 
-    // SPA fallback for extensionless routes like /work or /about
-    if (!stat && path.extname(pathname) === '') {
-        filePath = path.join(ROOT_DIR, 'index.html');
-        stat = tryStat(filePath);
-    }
-
     if (!stat || !stat.isFile()) {
         console.warn(`[404] ${pathname}`);
+        const notFound = path.join(ROOT_DIR, '404.html');
+        const notFoundStat = tryStat(notFound);
+        if (notFoundStat && notFoundStat.isFile()) {
+            return serveFile(notFound, notFoundStat, req, res, 404);
+        }
         return sendError(res, 404, 'Not Found');
     }
 
