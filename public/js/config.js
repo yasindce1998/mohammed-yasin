@@ -101,7 +101,7 @@ export const PROJECTS = [
         status: 'ACTIVE DEVELOPMENT',
         url: 'https://github.com/yasindce1998/NeuronTrace',
         subtitle: 'Containing AI agent behavior at the syscall layer, before damage lands.',
-        description: 'Kernel-level behavioral containment for AI agents operating at the syscall layer. NeuronTrace profiles what an agent is *supposed* to do, then fences what it *can* do — intercepting file, network, and process syscalls through eBPF/LSM hooks so a prompt-injected or runaway agent hits a hard kernel boundary, not a hopeful sandbox.',
+        description: 'Kernel-level behavioral containment for AI agents operating at the syscall layer. NeuronTrace profiles what an agent is supposed to do, then fences what it can do — intercepting file, network, and process syscalls through eBPF/LSM hooks so a prompt-injected or runaway agent hits a hard kernel boundary, not a hopeful sandbox.',
         tags: ['Rust', 'eBPF', 'LSM', 'AI Containment'],
         accent: '#00f2fe',
         hue: 0.52,

@@ -64,6 +64,14 @@ summary:focus-visible {
     outline-offset: 3px;
 }
 
+/* The splash predates any project, so --accent is just the first card's red.
+   Keep its focus ring on the brand cyan, thinner and softer. */
+.enter button:focus-visible {
+    outline: 1px solid #00f2fe;
+    outline-offset: 4px;
+    box-shadow: 0 0 18px rgba(0, 242, 254, 0.25);
+}
+
 /* Visually hidden but available to assistive tech */
 .sr-only {
     position: absolute !important;
@@ -209,11 +217,11 @@ html:not(.entered), html:not(.entered) *,
     font-family: var(--mono);
     font-size: 11px;
     letter-spacing: 0.18em;
-    color: var(--dim);
+    color: rgba(245, 245, 248, 0.7);
 }
 
 .telemetry-stats {
-    color: var(--dimmer);
+    color: rgba(245, 245, 248, 0.62);
     font-variant-numeric: tabular-nums;
 }
 
@@ -603,9 +611,21 @@ html:not(.entered), html:not(.entered) *,
     border: 1px solid var(--line);
     border-radius: 16px;
     padding: clamp(24px, 4vw, 48px);
+    padding-bottom: clamp(56px, 7vw, 72px);
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
     transform: scale(0.95) translateY(20px);
     transition: transform 0.5s var(--ease);
+}
+
+.modal-container::after {
+    content: "";
+    position: sticky;
+    display: block;
+    bottom: calc(-1 * clamp(56px, 7vw, 72px));
+    height: 56px;
+    margin: 0 calc(-1 * clamp(24px, 4vw, 48px)) calc(-1 * clamp(56px, 7vw, 72px));
+    background: linear-gradient(to top, rgba(10, 10, 15, 0.98), transparent);
+    pointer-events: none;
 }
 
 .modal.active .modal-container {
@@ -639,12 +659,21 @@ html:not(.entered), html:not(.entered) *,
     font-family: var(--mono);
     font-size: 11px;
     letter-spacing: 0.18em;
+    white-space: nowrap;
+    flex-shrink: 0;
     cursor: pointer;
     transition: color 0.2s;
 }
 
 .modal-close-btn:hover {
     color: #fff;
+}
+
+.modal-close-btn:focus-visible {
+    color: #fff;
+    outline: 1px solid var(--accent);
+    outline-offset: 6px;
+    border-radius: 6px;
 }
 
 .modal-title {
@@ -679,6 +708,14 @@ html:not(.entered), html:not(.entered) *,
     position: absolute;
     inset: 0;
     background: radial-gradient(circle at 80% 20%, rgba(0, 242, 254, 0.25), transparent 70%);
+}
+
+.modal-hero-art {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0.9;
 }
 
 .modal-hero-badge {
@@ -726,6 +763,17 @@ html:not(.entered), html:not(.entered) *,
     line-height: 1.6;
     letter-spacing: 0.05em;
     word-break: break-all;
+}
+
+.modal-repo a {
+    color: inherit;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    text-decoration-thickness: 1px;
+}
+
+.modal-repo a:hover {
+    color: #fff;
 }
 
 .modal-client, .modal-year, .modal-focus, .modal-status {
@@ -1001,7 +1049,7 @@ html:not(.entered), html:not(.entered) *,
     .filter-tabs { flex-wrap: wrap; }
     .contact-links { flex-wrap: wrap; }
     .project-pagination { order: 3; flex-basis: 100%; justify-content: center; }
-    #content { padding-bottom: 148px; }
+    #content { padding-bottom: 160px; }
 }
 
 @media (max-width: 380px) {
@@ -1018,7 +1066,7 @@ html:not(.entered), html:not(.entered) *,
     .header-right { gap: 8px; }
     .header-right .pill { height: 30px; padding: 0 12px; font-size: 10px; }
     #content { padding-bottom: calc(156px + env(safe-area-inset-bottom)); }
-    .bottom-bar { padding-bottom: calc(10px + env(safe-area-inset-bottom)); }
+    .bottom-bar { padding-bottom: calc(22px + env(safe-area-inset-bottom)); }
     .modal-container { max-height: 90vh; max-height: 90dvh; }
     /* Experience rows collapse gracefully on narrow screens */
     .exp-item { flex-wrap: wrap; }
