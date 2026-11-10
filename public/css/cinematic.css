@@ -40,12 +40,18 @@
     text-shadow: 0 0 50px rgba(0, 242, 254, 0.3);
 }
 
-/* Dot-matrix title canvas (splash.js). Sized to match the h1 it visually replaces. */
+/* Dot-matrix title canvas (splash.js). Sized to match the h1 it visually
+   replaces. It stays transparent until the first dot grid has been built, so
+   the static h1 is the only thing visible during the pre-JS/early-boot frame. */
 .enter-canvas {
     display: block;
     width: min(92vw, 780px);
     height: clamp(70px, 13vw, 150px);
+    opacity: 0;
+    transition: opacity 0.35s var(--ease);
 }
+
+.enter.has-canvas .enter-canvas { opacity: 1; }
 
 /* Boot progress readout */
 .enter-progress {

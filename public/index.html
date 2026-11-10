@@ -4,27 +4,40 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="theme-color" content="#050508">
+    <meta name="color-scheme" content="dark">
+    <meta name="robots" content="index,follow">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black">
     <meta name="apple-mobile-web-app-title" content="Mohammed Yasin">
+    <link rel="canonical" href="https://mohammedyasin.vercel.app/">
     <link rel="manifest" href="/manifest.webmanifest">
     <link rel="apple-touch-icon" href="/assets/meta/apple-touch-icon.png">
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23050508'/%3E%3Cpath d='M6 24 L16 6 L26 24' fill='none' stroke='%2300f2fe' stroke-width='2'/%3E%3Ccircle cx='16' cy='19' r='2.5' fill='none' stroke='%23ff2a4d' stroke-width='2'/%3E%3C/svg%3E">
     <title>Mohammed Yasin — Security Engineer & Digital Architect</title>
-    <meta name="description" content="Mohammed Yasin — Security engineer building kernel-level offense and cloud-native defense. eBPF, Rust, Golang, Kubernetes. Interactive WebGL portfolio.">
+    <meta name="description" content="Mohammed Yasin — security engineer building kernel-level offense and cloud-native defense. eBPF, Rust, Golang, Kubernetes. Interactive WebGL portfolio.">
+    <meta property="og:site_name" content="Mohammed Yasin">
+    <meta property="og:locale" content="en_US">
     <meta property="og:title" content="Mohammed Yasin — Security Engineer & Digital Architect">
     <meta property="og:description" content="Kernel-level offense, cloud-native defense. 5+ years across eBPF, Rust, Golang and Kubernetes. Interactive WebGL portfolio.">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://mohammedyasin.vercel.app/">
-    <meta name="twitter:card" content="summary">
+    <meta property="og:image" content="https://mohammedyasin.vercel.app/assets/meta/og.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="Mohammed Yasin — Security Engineer and Digital Architect">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:site" content="@yasindce1998">
+    <meta name="twitter:creator" content="@yasindce1998">
     <meta name="twitter:title" content="Mohammed Yasin — Security Engineer & Digital Architect">
     <meta name="twitter:description" content="Kernel-level offense, cloud-native defense. Interactive WebGL portfolio.">
+    <meta name="twitter:image" content="https://mohammedyasin.vercel.app/assets/meta/og.png">
     <link rel="preload" href="/fonts/space-grotesk.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="preload" href="/fonts/space-mono-400.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="preload" href="/fonts/space-mono-700.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="stylesheet" href="/css/style.css">
     <link rel="stylesheet" href="/css/cinematic.css">
     <link rel="modulepreload" href="/js/main.js">
+    <script src="/js/boot-watchdog.js" defer></script>
     <script type="application/ld+json">
     {
         "@context": "https://schema.org",
@@ -33,26 +46,30 @@
         "jobTitle": "Security Engineer & Digital Architect",
         "email": "mailto:yasindce1998@gmail.com",
         "url": "https://mohammedyasin.vercel.app/",
+        "image": "https://mohammedyasin.vercel.app/assets/meta/og.png",
         "address": { "@type": "PostalAddress", "addressLocality": "Bengaluru", "addressCountry": "IN" },
         "sameAs": [
             "https://github.com/yasindce1998",
             "https://linkedin.com/in/mohammed-yasin-4660b9206",
-            "https://x.com/yasindce1998"
+            "https://x.com/yasindce1998",
+            "https://leetcode.com/u/yasindce1998"
         ],
-        "knowsAbout": ["eBPF", "Linux Kernel", "Kubernetes", "Offensive Security", "Golang", "Rust", "WebAssembly", "Distributed Systems"]
+        "knowsAbout": ["eBPF", "Linux Kernel", "Kubernetes", "Offensive Security", "Golang", "Rust", "WebAssembly", "Distributed Systems", "Runtime Security", "Cloud Native", "AI Agent Security", "UEFI"]
     }
     </script>
 </head>
 <body>
+    <a class="skip-link" href="#content">Skip to content</a>
     <canvas id="gl" aria-hidden="true"></canvas>
 
-    <!-- Splash Enter Screen -->
-    <div id="enter" class="enter" role="dialog" aria-labelledby="enter-title">
+    <!-- Splash Enter Screen. The h1 is visible before JavaScript and is replaced
+         by the dot-matrix canvas once that initialises. -->
+    <div id="enter" class="enter" role="dialog" aria-modal="true" aria-labelledby="enter-title" aria-describedby="enter-desc">
         <div class="enter-inner">
             <p class="enter-meta" data-decode="SECURITY ENGINEER // BENGALURU, INDIA"></p>
-            <h1 id="enter-title" class="enter-title sr-only">MOHAMMED YASIN</h1>
+            <h1 id="enter-title" class="enter-title">MOHAMMED YASIN</h1>
             <canvas id="enter-canvas" class="enter-canvas" aria-hidden="true"></canvas>
-            <p class="enter-meta dim" data-decode="KERNEL-LEVEL OFFENSE · CLOUD-NATIVE DEFENSE"></p>
+            <p class="enter-meta dim" id="enter-desc" data-decode="KERNEL-LEVEL OFFENSE · CLOUD-NATIVE DEFENSE"></p>
             <div class="enter-actions">
                 <button id="enter-sound" class="pill pill-primary" type="button" data-magnetic disabled>ENTER WITH SOUND</button>
                 <button id="enter-silent" class="pill" type="button" data-magnetic disabled>ENTER SILENTLY</button>
@@ -90,7 +107,7 @@
     </header>
 
     <!-- Center Stage Overlay: Project Details -->
-    <main id="content">
+    <main id="content" tabindex="-1">
         <div class="project-info" id="project-info">
             <div class="project-category" id="project-category">[ 01 // OFFENSE ]</div>
             <h1 class="project-title" id="project-title">RedHands</h1>
@@ -118,10 +135,12 @@
         </nav>
 
         <div class="contact-links">
+            <a class="contact-link" href="/work/" data-magnetic>WORK</a>
+            <a class="contact-link" href="/resume/" data-magnetic>RÉSUMÉ</a>
             <a class="contact-link" href="mailto:yasindce1998@gmail.com" data-magnetic>EMAIL</a>
-            <a class="contact-link" href="https://github.com/yasindce1998" target="_blank" rel="noopener" data-magnetic>GITHUB</a>
-            <a class="contact-link" href="https://linkedin.com/in/mohammed-yasin-4660b9206" target="_blank" rel="noopener" data-magnetic>LINKEDIN</a>
-            <a class="contact-link" href="https://x.com/yasindce1998" target="_blank" rel="noopener" data-magnetic>X</a>
+            <a class="contact-link" href="https://github.com/yasindce1998" target="_blank" rel="noopener noreferrer" data-magnetic>GITHUB</a>
+            <a class="contact-link" href="https://linkedin.com/in/mohammed-yasin-4660b9206" target="_blank" rel="noopener noreferrer" data-magnetic>LINKEDIN</a>
+            <a class="contact-link" href="https://x.com/yasindce1998" target="_blank" rel="noopener noreferrer" data-magnetic>X</a>
         </div>
     </footer>
 
@@ -166,8 +185,11 @@
                         <div id="modal-tags" class="tag-cloud"></div>
 
                         <div class="modal-action-box">
-                            <a id="modal-launch" href="https://github.com/yasindce1998" target="_blank" rel="noopener" class="pill pill-primary pill-launch" data-magnetic>
+                            <a id="modal-launch" href="https://github.com/yasindce1998" target="_blank" rel="noopener noreferrer" class="pill pill-primary pill-launch" data-magnetic>
                                 VIEW SOURCE ↗
+                            </a>
+                            <a id="modal-fullpage" href="/work/redhands/" class="pill pill-launch" data-magnetic>
+                                READ FULL PAGE ↗
                             </a>
                         </div>
                     </div>
@@ -187,14 +209,14 @@
             <div class="modal-body">
                 <h2 class="modal-title">Mohammed Yasin</h2>
                 <p class="modal-tagline">Security Engineer & Digital Architect · Bengaluru</p>
-                <p class="modal-desc">
+                <p class="modal-desc" id="info-summary">
                     I work at the boundary between creation and destruction — kernel-level offense
                     as a rehearsal for defense, and cloud-native defense built from knowing exactly
                     how systems fail. Five years engineering production systems across Golang, Rust,
                     Kubernetes, and eBPF: 11 systems shipped, from kernel observability to enterprise
                     cloud platforms.
                 </p>
-                <div class="modal-stats">
+                <div class="modal-stats" id="info-stats">
                     <div class="stat"><strong>5+</strong><span>YEARS IN PRODUCTION</span></div>
                     <div class="stat"><strong>11</strong><span>SYSTEMS SHIPPED</span></div>
                     <div class="stat"><strong>RING 0 → CLOUD</strong><span>RANGE</span></div>
@@ -208,6 +230,7 @@
 
                 <div class="modal-action-box">
                     <a href="mailto:yasindce1998@gmail.com" class="pill pill-primary pill-launch" data-magnetic>GET IN TOUCH ↗</a>
+                    <a href="/resume/" class="pill pill-launch" data-magnetic>VIEW RÉSUMÉ ↗</a>
                 </div>
             </div>
         </div>
@@ -219,13 +242,65 @@
     </div>
 
     <div class="fallback">
-        <h1>Mohammed Yasin</h1>
-        <p>Security Engineer & Digital Architect — kernel-level offense, cloud-native defense.
-            This experience needs WebGL 2 with float render targets; try a modern browser with hardware acceleration enabled.
-            Meanwhile: <a href="https://github.com/yasindce1998" style="color:inherit">github.com/yasindce1998</a></p>
+        <div class="fallback-inner">
+            <p class="fallback-kicker">[ WEBGL UNAVAILABLE ]</p>
+            <h1>Mohammed Yasin</h1>
+            <p class="fallback-role">Security Engineer &amp; Digital Architect · Bengaluru, India</p>
+            <p id="fallback-message">Kernel-level offense, cloud-native defense. This experience needs WebGL 2 with
+                float render targets; try a modern browser with hardware acceleration enabled.</p>
+            <!-- BUILD:FALLBACK-PROJECTS:START -->
+<div class="fallback-projects">
+    <h2>Selected work</h2>
+    <ul>
+        <li><a href="/work/redhands/"><strong>RedHands</strong></a> — Offensive Security Tooling for AI Agents</li>
+        <li><a href="/work/aegis-shadow/"><strong>Aegis-Shadow</strong></a> — Dual-Module eBPF Rootkit &amp; Runtime Auditor</li>
+        <li><a href="/work/kubedagger/"><strong>KubeDagger</strong></a> — eBPF Offensive Toolkit for Kubernetes</li>
+        <li><a href="/work/neurontrace/"><strong>NeuronTrace</strong></a> — Kernel-Level Behavioral Containment for AI Agents</li>
+        <li><a href="/work/barzakh/"><strong>Barzakh</strong></a> — Firmware Threat Research Platform</li>
+        <li><a href="/work/warmor/"><strong>Warmor</strong></a> — eBPF Monitoring with WebAssembly Policies</li>
+        <li><a href="/work/staticzero/"><strong>StaticZero</strong></a> — eBPF Telecom Security Framework</li>
+    </ul>
+</div>
+<!-- BUILD:FALLBACK-PROJECTS:END -->
+            <p>
+                <a href="/work/">All work</a> ·
+                <a href="/resume/">Résumé</a> ·
+                <a href="mailto:yasindce1998@gmail.com">Email</a> ·
+                <a href="https://github.com/yasindce1998" target="_blank" rel="noopener noreferrer">GitHub</a> ·
+                <a href="https://linkedin.com/in/mohammed-yasin-4660b9206" target="_blank" rel="noopener noreferrer">LinkedIn</a>
+            </p>
+        </div>
     </div>
 
-    <noscript><style>.enter{display:none}</style><p class="noscript">This site needs JavaScript.</p></noscript>
+    <!-- BUILD:NOJS:START -->
+<noscript>
+    <style>
+        html, body { overflow: auto !important; height: auto !important; }
+        #enter, .top, #content, .bottom-bar, .frame, #cursor, #gl { display: none !important; }
+        .nojs-page { display: block; position: relative; max-width: 760px; margin: 0 auto; padding: 72px 24px 96px; }
+    </style>
+    <div class="nojs-page">
+        <p class="fallback-kicker">[ NO JAVASCRIPT ]</p>
+        <h1>Mohammed Yasin</h1>
+        <p class="fallback-role">Security Engineer &amp; Digital Architect · Bengaluru, India</p>
+        <p>I work at the boundary between creation and destruction — kernel-level offense as a rehearsal for defense, and cloud-native defense built from knowing exactly how systems fail. Five years engineering production systems across Golang, Rust, Kubernetes, and eBPF: 11 systems shipped, from kernel observability to enterprise cloud platforms.</p>
+        <div class="fallback-projects">
+    <h2>Selected work</h2>
+    <ul>
+        <li><a href="/work/redhands/"><strong>RedHands</strong></a> — Offensive Security Tooling for AI Agents</li>
+        <li><a href="/work/aegis-shadow/"><strong>Aegis-Shadow</strong></a> — Dual-Module eBPF Rootkit &amp; Runtime Auditor</li>
+        <li><a href="/work/kubedagger/"><strong>KubeDagger</strong></a> — eBPF Offensive Toolkit for Kubernetes</li>
+        <li><a href="/work/neurontrace/"><strong>NeuronTrace</strong></a> — Kernel-Level Behavioral Containment for AI Agents</li>
+        <li><a href="/work/barzakh/"><strong>Barzakh</strong></a> — Firmware Threat Research Platform</li>
+        <li><a href="/work/warmor/"><strong>Warmor</strong></a> — eBPF Monitoring with WebAssembly Policies</li>
+        <li><a href="/work/staticzero/"><strong>StaticZero</strong></a> — eBPF Telecom Security Framework</li>
+    </ul>
+</div>
+        <p><a href="/resume/">Résumé</a> · <a href="mailto:yasindce1998@gmail.com">Email</a> · <a href="https://github.com/yasindce1998">GitHub</a> · <a href="https://linkedin.com/in/mohammed-yasin-4660b9206">LinkedIn</a></p>
+        <p class="muted">The interactive WebGL ribbon needs JavaScript. Every project above has a crawlable page.</p>
+    </div>
+</noscript>
+<!-- BUILD:NOJS:END -->
     <script type="module" src="/js/main.js"></script>
 </body>
 </html>

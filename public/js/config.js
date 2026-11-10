@@ -2,6 +2,13 @@
 // Kernel-to-cloud security engineering showcase with interactive 3D ribbon
 // physics, liquid shaders, case studies, and live parameter tuning.
 
+export const SITE = {
+    url: 'https://mohammedyasin.vercel.app',
+    title: 'Mohammed Yasin — Security Engineer & Digital Architect',
+    description: 'Mohammed Yasin — security engineer building kernel-level offense and cloud-native defense. eBPF, Rust, Golang, Kubernetes. Interactive WebGL portfolio.',
+    locale: 'en_US'
+};
+
 export const OWNER = {
     name: 'Mohammed Yasin',
     role: 'Security Engineer & Digital Architect',
@@ -14,6 +21,22 @@ export const OWNER = {
     twitter: 'https://x.com/yasindce1998',
     leetcode: 'https://leetcode.com/u/yasindce1998'
 };
+
+// Shared About/resume copy so the modal and the static pages cannot drift.
+export const ABOUT = {
+    summary: 'I work at the boundary between creation and destruction — kernel-level offense as a rehearsal for defense, and cloud-native defense built from knowing exactly how systems fail. Five years engineering production systems across Golang, Rust, Kubernetes, and eBPF: 11 systems shipped, from kernel observability to enterprise cloud platforms.',
+    stats: [
+        { value: '5+', label: 'YEARS IN PRODUCTION' },
+        { value: '11', label: 'SYSTEMS SHIPPED' },
+        { value: 'RING 0 → CLOUD', label: 'RANGE' }
+    ]
+};
+
+export const SKILLS = [
+    'eBPF', 'Linux Kernel', 'Kubernetes', 'Offensive Security',
+    'Golang', 'Rust', 'WebAssembly', 'Distributed Systems',
+    'Runtime Security', 'Cloud Native', 'AI Agent Security', 'UEFI'
+];
 
 export const PROJECTS = [
     {

@@ -37,6 +37,33 @@
     --pad: clamp(16px, 3.5vw, 48px);
 }
 
+/* Keyboard escape hatch before the canvas experience */
+.skip-link {
+    position: fixed;
+    top: -100px;
+    left: 16px;
+    z-index: 300;
+    padding: 10px 16px;
+    border: 1px solid var(--accent);
+    border-radius: 6px;
+    background: rgba(10, 10, 16, 0.96);
+    color: var(--fg);
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-decoration: none;
+}
+
+.skip-link:focus { top: 16px; }
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+summary:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+}
+
 /* Visually hidden but available to assistive tech */
 .sr-only {
     position: absolute !important;
@@ -812,6 +839,8 @@ html:not(.entered), html:not(.entered) *,
 }
 
 .modal-action-box {
+    display: grid;
+    gap: 10px;
     margin-top: 24px;
 }
 
@@ -878,22 +907,84 @@ html:not(.entered), html:not(.entered) *,
 
 /* Fallbacks */
 .fallback, .noscript { display: none; }
+.no-webgl, .boot-timeout { overflow: auto !important; height: auto !important; }
+.no-webgl body, .boot-timeout body { overflow: auto !important; }
 .no-webgl #gl, .no-webgl .top, .no-webgl #content, .no-webgl .bottom-bar,
-.no-webgl .enter { display: none !important; }
-.no-webgl .fallback {
-    display: grid;
-    place-content: center;
-    gap: 12px;
-    height: 100%;
-    padding: var(--pad);
-    text-align: center;
+.no-webgl .frame, .no-webgl .enter,
+.boot-timeout #gl, .boot-timeout .top, .boot-timeout #content, .boot-timeout .bottom-bar,
+.boot-timeout .frame, .boot-timeout .enter { display: none !important; }
+.no-webgl #cursor, .boot-timeout #cursor { display: none !important; }
+.no-webgl .fallback, .boot-timeout .fallback {
+    display: flex;
+    justify-content: center;
+    min-height: 100%;
+    padding: clamp(32px, 7vw, 80px) var(--pad);
     color: var(--dim);
 }
-.no-webgl .fallback h1 { color: var(--fg); letter-spacing: 0.3em; font-weight: 600; }
+.fallback-inner {
+    width: min(760px, 100%);
+    display: grid;
+    gap: 14px;
+    align-content: start;
+}
+.fallback-kicker {
+    margin: 0;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    color: var(--accent);
+}
+.no-webgl .fallback h1, .boot-timeout .fallback h1 {
+    margin: 0;
+    color: var(--fg);
+    font-size: clamp(32px, 6vw, 56px);
+    letter-spacing: 0.16em;
+    font-weight: 600;
+}
+.fallback-role {
+    margin: 0;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--dim);
+}
+.fallback a { color: var(--accent); }
+.fallback a:hover { color: #fff; }
+
+/* Fallback project list is injected by scripts/build-static.js from config.js */
+.fallback-projects { margin: 10px 0; }
+.fallback-projects h2 {
+    margin: 0 0 10px;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--accent);
+}
+.fallback-projects ul { margin: 0; padding-left: 18px; }
+.fallback-projects li { margin: 8px 0; line-height: 1.5; }
+.fallback-projects a { color: var(--fg); }
+.fallback-projects a:hover { color: var(--accent); }
+
 .noscript { display: block; position: fixed; inset: auto 0 40% 0; text-align: center; }
 
 @media (max-width: 1260px) {
     .brand-sub { display: none; }
+}
+
+@media (max-width: 1120px) {
+    /* With WORK/RÉSUMÉ added, the bottom bar needs to wrap before the
+       desktop-width contact row can collide with pagination. */
+    .bottom-bar {
+        height: auto;
+        flex-wrap: wrap;
+        gap: 8px 16px;
+        padding: 10px 16px;
+    }
+    .filter-tabs, .contact-links { flex-wrap: wrap; }
+    .project-pagination { order: 3; flex-basis: 100%; justify-content: center; }
+    #content { padding-bottom: 148px; }
 }
 
 @media (max-width: 860px) {
@@ -932,4 +1023,12 @@ html:not(.entered), html:not(.entered) *,
     /* Experience rows collapse gracefully on narrow screens */
     .exp-item { flex-wrap: wrap; }
     .exp-role { min-width: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
 }
