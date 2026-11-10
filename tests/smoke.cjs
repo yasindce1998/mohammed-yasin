@@ -236,7 +236,18 @@ async function main() {
         await check('keyboard navigation changes the focused project', async () => {
             const before = await page.locator('#sr-status').textContent();
             await page.keyboard.press('ArrowRight');
-            await page.waitForTimeout(900);
+            // The announcement fires when the ribbon spring crosses into the
+            // next slot. SwiftShader in CI is slow enough that a fixed sleep is
+            // flaky, so wait for the state change instead of guessing a frame
+            // budget.
+            await page.waitForFunction(
+                (previous) => {
+                    const status = document.getElementById('sr-status');
+                    return !!status && status.textContent !== previous;
+                },
+                before,
+                { timeout: 15000 }
+            );
             const after = await page.locator('#sr-status').textContent();
             assert(before !== after, 'status announced a different project');
         });
