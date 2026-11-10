@@ -78,6 +78,7 @@ export class UI {
         this.modalTitle = document.getElementById('modal-title');
         this.modalTagline = document.getElementById('modal-tagline');
         this.modalHeroGlow = document.getElementById('modal-hero-glow');
+        this.modalHeroArt = document.getElementById('modal-hero-art');
         this.modalDesc = document.getElementById('modal-desc');
         this.modalYear = document.getElementById('modal-year');
         this.modalTags = document.getElementById('modal-tags');
@@ -449,7 +450,11 @@ export class UI {
         const launch = document.getElementById('modal-launch');
         if (focus) focus.textContent = project.focus || '—';
         if (status) status.textContent = project.status || '—';
-        if (repo) repo.textContent = project.url ? project.url.replace('https://', '') : '—';
+        if (this.modalYear) this.modalYear.textContent = project.year || '—';
+        if (repo) {
+            repo.textContent = project.url ? project.url.replace('https://', '') : '—';
+            if (project.url) repo.href = project.url;
+        }
         if (launch && project.url) {
             launch.href = project.url;
             launch.textContent = 'VIEW SOURCE ↗';
@@ -460,6 +465,7 @@ export class UI {
         const accent = project.accent || '#00f2fe';
         this.modalHeroGlow.style.background = `radial-gradient(circle at 80% 20%, ${accent}40, transparent 70%)`;
         document.documentElement.style.setProperty('--accent', accent);
+        this.drawModalHeroArt(project, accent);
 
         // Tags
         this.modalTags.innerHTML = project.tags.map(t => `<span class="tech-tag">${t}</span>`).join('');
@@ -478,6 +484,30 @@ export class UI {
             title: project.title,
             category: project.category
         });
+    }
+
+    // Reuses the ribbon card's schematic so the case-study hero matches the card
+    drawModalHeroArt(project, accent) {
+        const canvas = this.modalHeroArt;
+        const ctx = canvas?.getContext('2d');
+        if (!ctx || !this.cards) return;
+        const { width: w, height: h } = canvas;
+
+        ctx.clearRect(0, 0, w, h);
+        ctx.strokeStyle = 'rgba(120, 160, 200, 0.06)';
+        ctx.lineWidth = 1;
+        for (let x = 0; x < w; x += 40) {
+            ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
+        }
+        for (let y = 0; y < h; y += 40) {
+            ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+        }
+
+        ctx.save();
+        ctx.translate(w * 0.72, h * 0.5);
+        ctx.scale(1.25, 1.25);
+        this.cards.drawProjectArt(ctx, project.id, accent);
+        ctx.restore();
     }
 
     closeCaseStudy() {
